@@ -272,7 +272,8 @@ function QuantumCircuits.graycodefigure(n::Integer=4; theme::Symbol=:light, scal
     p = _palette(theme)
     N = 1 << n
     seq = [gray(i) for i in 0:N-1]
-    flips = gray_flip_positions(n)          # bit flipped entering step i (cyclic)
+    flips = gray_flip_positions(n)      # flips[j]: bit changing between gray(j-1) and gray(j)
+    ncol = N + 1                        # ... the last one closes the cycle back to i = 0
 
     surf = parse(Makie.Colorant, p.surface)
     ink = parse(Makie.Colorant, p.ink)
@@ -281,48 +282,65 @@ function QuantumCircuits.graycodefigure(n::Integer=4; theme::Symbol=:light, scal
     accent2 = parse(Makie.Colorant, p.accent2)
     fillc = parse(Makie.Colorant, p.fill)
 
-    fig = Figure(size=(scale * (160 + 34N), scale * (130 + 34n)), backgroundcolor=surf)
+    # Both panels live in one layout column, carry y-tick labels of the same
+    # width, and share an x range — so column i of the grid sits exactly above
+    # the stem for the flip that produced it.
+    bitticks = (b -> ("bit $b")).(n-1:-1:0)
+    xlo, xhi = 0.35, ncol + 0.65
+
+    fig = Figure(size=(scale * (150 + 34ncol), scale * (150 + 36n)), backgroundcolor=surf)
     ax = Axis(fig[1, 1]; title="$n-bit Gray code — one bit changes per step",
-              titlealign=:left, titlecolor=muted, backgroundcolor=surf, yreversed=true)
-    hidedecorations!(ax); hidespines!(ax)
+              titlealign=:left, titlecolor=muted, backgroundcolor=surf, yreversed=true,
+              yticks=(1:n, bitticks), yticklabelcolor=muted, yticklabelsize=11)
+    hidexdecorations!(ax)
+    hidespines!(ax)
+    hideydecorations!(ax; ticklabels=false)
 
     for i in 1:N, b in 0:n-1
         set = (seq[i] >> b) & 1 == 1
-        y = n - b                            # bit n-1 on top, bit 0 at the bottom
+        y = n - b                       # bit n-1 on top, bit 0 at the bottom
         poly!(ax, Rect2f(i - 0.42, y - 0.42, 0.84, 0.84);
               color=set ? accent : fillc, strokecolor=muted, strokewidth=0.4)
         text!(ax, Point2f(i, y); text=set ? "1" : "0", align=(:center, :center),
               fontsize=11, color=set ? surf : muted)
     end
-    # ring the bit that changed on entry to each step
-    for i in 2:N
-        y = n - flips[i-1]
-        poly!(ax, Rect2f(i - 0.46, y - 0.46, 0.92, 0.92);
+    for b in 0:n-1                      # the wrap column: back to gray(0) = 0
+        y = n - b
+        poly!(ax, Rect2f(ncol - 0.42, y - 0.42, 0.84, 0.84);
+              color=(fillc, 0.45), strokecolor=(muted, 0.45), strokewidth=0.4)
+        text!(ax, Point2f(ncol, y); text="0", align=(:center, :center),
+              fontsize=11, color=(muted, 0.6))
+    end
+    # ring the bit that changed on the way into each column
+    for col in 2:ncol
+        y = n - flips[col-1]
+        poly!(ax, Rect2f(col - 0.46, y - 0.46, 0.92, 0.92);
               color=(:white, 0.0), strokecolor=accent2, strokewidth=2.4)
     end
-    for b in 0:n-1
-        text!(ax, Point2f(0.25, n - b); text="bit $b", align=(:right, :center),
-              fontsize=11, color=muted)
-    end
     for i in 1:N
-        text!(ax, Point2f(i, n + 0.85); text=string(i - 1), align=(:center, :center),
+        text!(ax, Point2f(i, n + 0.88); text=string(i - 1), align=(:center, :center),
               fontsize=10, color=muted)
     end
-    text!(ax, Point2f(0.25, n + 0.85); text="i", align=(:right, :center), fontsize=11, color=muted)
-    limits!(ax, -1.6, N + 0.8, n + 1.4, 0.2)
+    text!(ax, Point2f(ncol, n + 0.88); text="↩0", align=(:center, :center),
+          fontsize=10, color=(muted, 0.7))
+    limits!(ax, xlo, xhi, n + 1.35, 0.3)
 
-    ax2 = Axis(fig[2, 1]; backgroundcolor=surf, xlabel="step i   (i = 2ⁿ closes the cycle)",
-               ylabel="flipped bit", xlabelcolor=muted, ylabelcolor=muted,
-               xticklabelcolor=muted, yticklabelcolor=muted,
-               yticks=(0:n-1, ["$b" for b in 0:n-1]))
+    ax2 = Axis(fig[2, 1]; backgroundcolor=surf,
+               xlabel="step i   (the last step closes the cycle: every bit has flipped an even number of times)",
+               xlabelcolor=muted, xlabelsize=11,
+               yticks=(0:n-1, reverse(bitticks)), yticklabelcolor=muted, yticklabelsize=11)
+    hidexdecorations!(ax2; label=false)
     hidespines!(ax2, :t, :r)
-    xs = 1:N
-    for (x, f) in zip(xs, flips)
-        lines!(ax2, [x, x], [-0.35, f]; color=ink, linewidth=1.0)
+    for col in 2:ncol                   # one stem per transition, under its ring
+        f = flips[col-1]
+        lines!(ax2, [col, col], [-0.45, f]; color=ink, linewidth=1.0)
+        scatter!(ax2, [col], [f]; color=accent2, markersize=9)
     end
-    scatter!(ax2, collect(xs), flips; color=accent2, markersize=9)
-    limits!(ax2, 0.2, N + 0.8, -0.5, n - 0.5)
-    rowsize!(fig.layout, 2, Relative(0.32))
+    limits!(ax2, xlo, xhi, -0.6, n - 0.4)
+
+    linkxaxes!(ax, ax2)
+    rowsize!(fig.layout, 2, Relative(0.34))
+    rowgap!(fig.layout, 6)
     fig
 end
 
