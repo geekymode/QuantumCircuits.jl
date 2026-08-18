@@ -154,8 +154,12 @@ lowest differing bit `p` bring them to a Gray-adjacent pair — identical except
 in bit `p` — at which point one multi-controlled `V` on wire `p` does the whole
 job. The routing is then undone, so the net operator is the identity outside
 `span(|a⟩, |b⟩)`.
+
+`lower = true` expands that multi-controlled gate into CNOTs and one-qubit
+gates with [`multicontrolled!`](@ref), giving a circuit made entirely of
+elementary gates.
 """
-function two_level!(c::Circuit, t::TwoLevel, n::Integer=c.nqubits)
+function two_level!(c::Circuit, t::TwoLevel, n::Integer=c.nqubits; lower::Bool=false)
     a, b, V = t.a, t.b, t.V
     a == b && throw(ArgumentError("two-level gate needs distinct basis states"))
     d = a ⊻ b
@@ -176,7 +180,11 @@ function two_level!(c::Circuit, t::TwoLevel, n::Integer=c.nqubits)
     for q in zeroctrl                       # controls fire on |1⟩, so flip the |0⟩ ones
         push!(c, X(), q)
     end
-    push!(c, controlled(Gate(:V, V), length(ctrls)), ctrls..., qp)
+    if lower
+        multicontrolled!(c, V, ctrls, qp)      # ... down to CNOTs and one-qubit gates
+    else
+        push!(c, controlled(Gate(:V, V), length(ctrls)), ctrls..., qp)
+    end
     for q in zeroctrl
         push!(c, X(), q)
     end
@@ -193,19 +201,20 @@ Synthesise an arbitrary `2ⁿ × 2ⁿ` unitary: [`two_level_decompose`](@ref) to
 plane rotations, then [`two_level!`](@ref) to turn each one into gates via
 Gray-code routing.
 
-Exact but not cheap — `O(4ⁿ)` factors, and the multi-controlled `V` gates it
-emits are single instructions that still need lowering to CNOTs. Use it as a
-reference implementation and for small `n`; [`prepare_state`](@ref) and
+Exact but not cheap — `O(4ⁿ)` factors. By default the multi-controlled `V`
+gates are left as single instructions; `lower = true` expands them into CNOTs
+and one-qubit gates via [`multicontrolled!`](@ref). Use it as a reference
+implementation and for small `n`; [`prepare_state`](@ref) and
 [`diagonal`](@ref) are the efficient paths for the structured cases.
 """
-function synthesize_unitary(U::AbstractMatrix)
+function synthesize_unitary(U::AbstractMatrix; lower::Bool=false)
     N = size(U, 1)
     ispow2(N) || throw(ArgumentError("need a 2ⁿ × 2ⁿ matrix"))
     n = trailing_zeros(N)
     c = Circuit(n)
     # circuits apply left to right, matrices right to left
     for t in Iterators.reverse(two_level_decompose(U))
-        two_level!(c, t, n)
+        two_level!(c, t, n; lower=lower)
     end
     c
 end

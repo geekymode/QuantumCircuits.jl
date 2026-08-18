@@ -27,12 +27,21 @@
         Hm = randn(ComplexF64, 4, 4); Hm = Hm + Hm'
         terms = pauli_decompose(Hm)
         dt = 0.03
-        c = Circuit(2); trotter_step!(c, terms, dt)
+        c = Circuit(2); trotter_step!(c, terms, dt; parity_network=false)
         # circuits apply terms left to right, matrices multiply right to left
         exact_product = reduce(*, (exp(-im * dt * real(cf) * pauli(s)) for (s, cf) in reverse(terms)))
         @test matrix(c) ≈ exact_product                       # exact, term by term
+
+        # pooling the commuting diagonal terms is a different ordering, but
+        # still a first-order step for the same Hamiltonian
+        cp = Circuit(2); trotter_step!(cp, terms, dt; parity_network=true)
+        @test gate_fidelity(matrix(cp), exp(-im * dt * Hm)) > 1 - 1e-3
+        @test count_cnots(cp) <= count_cnots(c)
         @test gate_fidelity(matrix(c), exp(-im * dt * Hm)) > 1 - 1e-3   # ≈ exp(-iHt)
         @test_throws ArgumentError trotter_step!(Circuit(2), ["XY" => 1.0 + 1.0im], dt)
+        @test_throws ArgumentError trotter_step!(Circuit(3), ["XY" => 1.0], dt; qubits=[1, 2, 3])
+        # a short string defaults to the leading wires, which is fine
+        @test trotter_step!(Circuit(3), ["XY" => 1.0], dt) isa Circuit
     end
 
     @testset "polynomial round trip" begin

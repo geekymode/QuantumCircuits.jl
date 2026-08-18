@@ -38,5 +38,6 @@ end
     include("test_mathkit.jl")
     include("test_matrixdecomp.jl")
     include("test_phasepoly.jl")
+    include("test_applications.jl")
     include("test_plots.jl")
 end

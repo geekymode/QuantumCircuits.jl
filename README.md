@@ -120,6 +120,36 @@ count_cnots(synthesize(pp; order = :gadgets))   # 114 — one ladder per term
 count_cnots(synthesize(pp; order = :gray))      #  62 — parity network = 2ⁿ-2, optimal
 ```
 
+### More Gray-code applications
+
+Fifteen worked applications, all measured and checked — see the
+[Applications](https://geekymode.github.io/QuantumCircuits.jl/dev/applications/)
+page, or run `julia --project=. examples/gray_applications.jl`:
+
+```julia
+gray_encoder(4)                     # |x⟩ ↦ |gray(x)⟩ — the code IS a CNOT circuit, n-1 gates
+gray_increment(4)                   # a Gray counter: one bit changes per tick
+multicontrolled(U, 1:4, 5)          # ancilla-free C^n(U) from a Gray walk over parities
+select(Us, 1:k, [k+1])              # LCU/QROM SELECT, address swept in Gray order
+truncate_terms(pp, 8)               # Walsh-series truncation: accuracy for gates
+synthesize_unitary(U; lower = true) # arbitrary unitary, down to CNOTs and 1-qubit gates
+```
+
+A few of the measured results:
+
+| Task | naive | Gray-code |
+|---|---|---|
+| `C⁵(U)`, no ancillas | multi-controlled decomposition | 31 controlled-`V` + 30 CNOTs |
+| Dense diagonal, `n=7` | 240 CNOTs (gadget per term) | **126** = `2ⁿ-2`, optimal |
+| QAOA cost operator, `n=6` | 258 CNOTs | **62**, same operator |
+| SELECT over 7 address bits | 254 X gates | **140** |
+| Smooth phase, 8 of 47 terms | 52 CNOTs exact | **14** at fidelity 0.998 |
+
+And one thing it does *not* buy: reordering Trotter terms by Gray adjacency
+does not reduce CNOTs, because each term's basis-change gates block ladder
+cancellation. The win comes from pooling commuting terms, not reordering
+non-commuting ones — the docs show the measurement.
+
 ### Illustrations
 
 Plotting is a package extension — it loads when a Makie backend is present and
@@ -175,6 +205,7 @@ true
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
+| Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
 | Illustrations (Makie ext) | `circuitfigure`, `circuitplot!`, `matrixfigure`, `graycodefigure`, `costfigure` |
 
 ## Documentation
@@ -203,7 +234,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-997 tests. Decompositions are checked against reference matrices built straight
+1356 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend:
 
@@ -213,10 +244,9 @@ QC_TEST_PLOTS=true julia --project=docs -e 'using Pkg; Pkg.test("QuantumCircuits
 
 ## Roadmap
 
-* Lowering multi-controlled gates to CNOTs via the Barenco Gray-code
-  construction (`synthesize_unitary` currently emits them as single instructions)
 * Cosine–sine decomposition, for the full quantum Shannon decomposition of an
   arbitrary `n`-qubit unitary
 * Two-qubit KAK / Cartan decomposition and optimal 3-CNOT two-qubit synthesis
-* Full GraySynth term-ordering for sparse phase polynomials
+* Full GraySynth term-ordering for sparse phase polynomials (the current parity
+  network is greedy: it hits the optimum on dense inputs, not always on sparse)
 * More optimisation passes (rotation merging, commutation-aware cancellation)

@@ -46,6 +46,11 @@ export zyz, decompose_1q, decompose_1q!, TwoLevel, two_level_decompose,
        two_level!, synthesize_unitary, demultiplex, multiplexed_1q,
        multiplexed_1q!
 
+# applications of Gray coding
+export matrix_root, multicontrolled, multicontrolled!, gray_encoder, gray_decoder,
+       increment, increment!, gray_increment, select, select!, support_mask,
+       gray_order, truncate_terms
+
 # plotting (implemented by the Makie extension)
 export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure
 
@@ -61,6 +66,7 @@ include("decompose.jl")
 include("mathkit.jl")
 include("matrixdecomp.jl")
 include("phasepoly.jl")
+include("applications.jl")
 include("plots.jl")
 
 end # module

@@ -20,6 +20,7 @@ makedocs(
         "Home"          => "index.md",
         "Gray coding"   => "graycode.md",
         "Linear algebra" => "math.md",
+        "Applications"  => "applications.md",
         "Illustrations" => "plots.md",
         "API reference" => "api.md",
     ],
