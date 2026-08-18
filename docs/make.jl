@@ -1,5 +1,6 @@
 using Documenter
 using QuantumCircuits
+using CairoMakie          # loads the plotting extension so its docs build
 
 DocMeta.setdocmeta!(QuantumCircuits, :DocTestSetup, :(using QuantumCircuits); recursive=true)
 
@@ -18,6 +19,8 @@ makedocs(
     pages = [
         "Home"          => "index.md",
         "Gray coding"   => "graycode.md",
+        "Linear algebra" => "math.md",
+        "Illustrations" => "plots.md",
         "API reference" => "api.md",
     ],
     checkdocs = :exports,

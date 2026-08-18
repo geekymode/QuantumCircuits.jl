@@ -54,3 +54,42 @@ for n in 1:8
     circ = prepare_state(normalize(randn(ComplexF64, 1 << n)))
     println(lpad(n, 2), "  | ", lpad(count_cnots(circ), 27), " | ", lpad(n * (1 << n), 14))
 end
+
+hdr("7. Matrix decompositions")
+U = matrix(prepare_state([1, 2, 3im, 4]))
+factors = two_level_decompose(U)
+println("two-level (Givens) factors: ", length(factors))
+println("  product reproduces U:      ", reduce(*, matrix(t, 4) for t in factors) ≈ U)
+println("  synthesised circuit ≈ U:   ", matrix(synthesize_unitary(U)) ≈ U)
+α, β, γ, δ = zyz(matrix(H()))
+println("ZYZ of H: α=", round(α, digits=3), " β=", round(β, digits=3),
+        " γ=", round(γ, digits=3), " δ=", round(δ, digits=3))
+V, θ, W = demultiplex(matrix(RY(0.4)), matrix(RZ(1.1)))
+mid = Diagonal(vcat(cis.(-θ ./ 2), cis.(θ ./ 2)))
+println("demultiplex identity holds: ",
+        kron(I(2), V) * mid * kron(I(2), W) ≈ cat(matrix(RY(0.4)), matrix(RZ(1.1)); dims=(1, 2)))
+
+hdr("8. Phase polynomials: Gray ordering vs one gadget per term")
+println(" n  | terms | one gadget each | parity network (gray) | optimal 2^n-2")
+for n in 2:6
+    local pp = phase_polynomial(randn(1 << n))
+    local naive = synthesize(pp; order=:gadgets)
+    local gray = synthesize(pp; order=:gray)
+    println(lpad(n, 2), "  | ", lpad(nterms(pp), 5), " | ", lpad(count_cnots(naive), 15),
+            " | ", lpad(count_cnots(gray), 21), " | ", lpad((1 << n) - 2, 13))
+end
+
+hdr("9. Hamiltonian simulation from a matrix")
+Hm = randn(4, 4); Hm = Hm + Hm'
+terms = pauli_decompose(Hm)
+println("Pauli terms: ", join([string(s, "→", round(real(c), digits=3)) for (s, c) in terms], "  "))
+c = Circuit(2); trotter_step!(c, terms, 0.05)
+println("Trotter step: ", length(c), " gates, ", count_cnots(c), " CNOTs")
+println("fidelity vs exp(-iH·dt): ", round(gate_fidelity(matrix(c), exp(-im * 0.05 * Hm)), digits=6))
+
+hdr("10. Illustrations")
+println("Plotting is a package extension. With a Makie backend installed:")
+println("    using CairoMakie")
+println("    circuitfigure(prepare_state([1, 2, 3im, 4]))")
+println("    graycodefigure(4);  matrixfigure(U; part=:phase);  costfigure(2:9)")
+println("    save(\"circuit.pdf\", circuitfigure(c))")

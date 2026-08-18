@@ -17,7 +17,7 @@ Conventions
 """
 module QuantumCircuits
 
-import LinearAlgebra
+using LinearAlgebra
 using Printf: @sprintf
 
 # Gray code
@@ -36,9 +36,31 @@ export Circuit, Instruction, nqubits, matrix, statevector, zero_state,
 export multiplex_angles, multiplex_matrix, multiplexed_rotation!,
        multiplexed_ry, multiplexed_rz, diagonal, diagonal!, prepare_state
 
+# linear algebra
+export is_unitary, gate_fidelity, global_phase_between, embed, kron_n,
+       fwht, fwht!, walsh_matrix, pauli, pauli_strings, pauli_decompose,
+       pauli_recompose, schmidt_values, entanglement_entropy
+
+# matrix decompositions
+export zyz, decompose_1q, decompose_1q!, TwoLevel, two_level_decompose,
+       two_level!, synthesize_unitary, demultiplex, multiplexed_1q,
+       multiplexed_1q!
+
+# plotting (implemented by the Makie extension)
+export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure
+
+# phase polynomials
+export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
+       PhasePolynomial, phase_polynomial, phases, support, nterms,
+       synthesize, cancel_adjacent_cnots!
+
 include("graycode.jl")
 include("gates.jl")
 include("circuit.jl")
 include("decompose.jl")
+include("mathkit.jl")
+include("matrixdecomp.jl")
+include("phasepoly.jl")
+include("plots.jl")
 
 end # module

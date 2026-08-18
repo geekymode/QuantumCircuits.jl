@@ -42,16 +42,10 @@ inverse is just the transpose over `2^k`:
 function multiplex_angles(α::AbstractVector{<:Real})
     m = length(α)
     ispow2(m) || throw(ArgumentError("need a power-of-two number of angles, got $m"))
-    θ = zeros(Float64, m)
-    for i in 1:m
-        g = gray(i - 1)
-        s = 0.0
-        for j in 0:m-1
-            s += ifelse(parity(g, j) == 1, -α[j+1], α[j+1])
-        end
-        θ[i] = s / m
-    end
-    θ
+    # The sum over j is a Walsh-Hadamard transform, so take it in O(m log m)
+    # rather than O(m^2) and read the result off in Gray order.
+    h = fwht(α)
+    [h[gray(i - 1) + 1] / m for i in 1:m]
 end
 
 """

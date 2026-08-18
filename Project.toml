@@ -7,7 +7,14 @@ version = "0.1.0"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
+[weakdeps]
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+
+[extensions]
+QuantumCircuitsMakieExt = "Makie"
+
 [compat]
+Makie = "0.21, 0.22, 0.23, 0.24"
 julia = "1.9"
 
 [extras]

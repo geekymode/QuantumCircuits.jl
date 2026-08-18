@@ -6,8 +6,8 @@
 
 **Documentation: <https://geekymode.github.io/QuantumCircuits.jl/>**
 
-A small, dependency-free Julia package for building quantum circuits and
-decomposing structured unitaries into elementary gates.
+A dependency-free Julia package for building quantum circuits, decomposing
+structured unitaries into elementary gates, and drawing the result.
 
 The theme of this first release is **Gray coding**: order the computational
 basis so consecutive states differ in exactly one bit, and the CNOT ladders in
@@ -92,6 +92,53 @@ c = diagonal([0.0, 0.3, 1.1, -0.7])   # diag(exp(im*φ))
 matrix(c) ≈ Diagonal(cis.([0.0, 0.3, 1.1, -0.7]))   # true, global phase included
 ```
 
+### Linear algebra and matrix decompositions
+
+Synthesis is applied matrix factorisation, so the factorisations are first-class:
+
+```julia
+zyz(matrix(H()))                    # Euler: U = e^{iα} RZ(β) RY(γ) RZ(δ)
+two_level_decompose(U)              # QR by plane rotations (Givens)
+synthesize_unitary(U)               # ... turned into gates by Gray-code routing
+demultiplex(U1, U2)                 # U₁⊕U₂ = (I⊗V)(D⊕D†)(I⊗W), one eigendecomposition
+multiplexed_1q(Us, [1,2], 3)        # uniformly controlled arbitrary SU(2)
+
+fwht(v)                             # Walsh–Hadamard transform, O(N log N)
+pauli_decompose(Hmat)               # exact expansion in the Pauli basis
+trotter_step!(c, terms, dt)         # ... straight into a Trotter circuit
+entanglement_entropy(ψ, 1)          # Schmidt values across a cut
+```
+
+Phase polynomials tie the algebra back to the Gray code. A diagonal unitary is
+`exp(i φ(x))`, and `φ` expands uniquely over parity functions; each term is a
+CNOT-ladder phase gadget. Visiting the terms in Gray order and carrying a
+running parity turns each ladder into a single CNOT:
+
+```julia
+pp = phase_polynomial(randn(64))
+count_cnots(synthesize(pp; order = :gadgets))   # 114 — one ladder per term
+count_cnots(synthesize(pp; order = :gray))      #  62 — parity network = 2ⁿ-2, optimal
+```
+
+### Illustrations
+
+Plotting is a package extension — it loads when a Makie backend is present and
+costs nothing otherwise:
+
+```julia
+using Pkg; Pkg.add("CairoMakie")
+using CairoMakie, QuantumCircuits
+
+circuitfigure(prepare_state([1, 2, 3im, 4]))    # publication-quality diagram
+matrixfigure(U; part = :phase)                  # block structure of a unitary
+graycodefigure(4)                               # the walk, with the flipped bit ringed
+costfigure(2:9)                                 # CNOT count vs naive compilation
+save("circuit.pdf", circuitfigure(c))           # vector output for a paper
+```
+
+Every figure takes `theme = :light | :dark`. See the
+[Illustrations](https://geekymode.github.io/QuantumCircuits.jl/dev/plots/) page.
+
 ### State preparation — `2ⁿ⁺¹ - 4` CNOTs
 
 ```julia
@@ -124,7 +171,11 @@ true
 | Gray code | `gray`, `ungray`, `graycode`, `gray_flip_position`, `gray_flip_positions`, `gray_adjacent`, `gray_walk`, `hamming`, `parity`, `bits` |
 | Gates | `Id`, `X`, `Y`, `Z`, `H`, `S`, `Sdg`, `T`, `Tdg`, `RX`, `RY`, `RZ`, `PHASE`, `CNOT`, `CZ`, `SWAP`, `controlled` |
 | Circuits | `Circuit`, `push!`, `append!`, `matrix`, `statevector`, `zero_state`, `apply!`, `draw`, `count_cnots`, `count_gates` |
-| Decompositions | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
+| Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
+| Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
+| Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
+| Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
+| Illustrations (Makie ext) | `circuitfigure`, `circuitplot!`, `matrixfigure`, `graycodefigure`, `costfigure` |
 
 ## Documentation
 
@@ -152,14 +203,20 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-Decompositions are checked against reference matrices built straight from the
-definitions (no Gray code in the reference path), including exact global phase
-and exact CNOT counts.
+997 tests. Decompositions are checked against reference matrices built straight
+from the definitions (no Gray code in the reference path), including exact
+global phase and exact CNOT counts. Plot tests need a Makie backend:
+
+```
+QC_TEST_PLOTS=true julia --project=docs -e 'using Pkg; Pkg.test("QuantumCircuits")'
+```
 
 ## Roadmap
 
-* Multi-controlled gates via the Barenco Gray-code construction (ancilla-free)
-* Uniformly controlled *general* `SU(2)` gates, and cosine–sine decomposition
-  for arbitrary `n`-qubit unitaries
-* Pauli-string exponentials with Gray-ordered term scheduling for Trotter steps
-* CNOT-count optimisation passes (adjacent-cancellation, rotation merging)
+* Lowering multi-controlled gates to CNOTs via the Barenco Gray-code
+  construction (`synthesize_unitary` currently emits them as single instructions)
+* Cosine–sine decomposition, for the full quantum Shannon decomposition of an
+  arbitrary `n`-qubit unitary
+* Two-qubit KAK / Cartan decomposition and optimal 3-CNOT two-qubit synthesis
+* Full GraySynth term-ordering for sparse phase polynomials
+* More optimisation passes (rotation merging, commutation-aware cancellation)

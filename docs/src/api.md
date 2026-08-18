@@ -76,7 +76,57 @@ count_gates
 count_cnots
 ```
 
-## Decompositions
+## Linear algebra
+
+```@docs
+fwht
+fwht!
+walsh_matrix
+pauli
+pauli_strings
+pauli_decompose
+pauli_recompose
+embed
+kron_n
+is_unitary
+gate_fidelity
+global_phase_between
+schmidt_values
+entanglement_entropy
+```
+
+## Matrix decompositions
+
+```@docs
+zyz
+decompose_1q
+decompose_1q!
+TwoLevel
+two_level_decompose
+two_level!
+synthesize_unitary
+demultiplex
+multiplexed_1q
+multiplexed_1q!
+```
+
+## Phase polynomials
+
+```@docs
+PhasePolynomial
+phase_polynomial
+phases
+support
+nterms
+synthesize
+phase_gadget
+phase_gadget!
+pauli_rotation!
+trotter_step!
+cancel_adjacent_cnots!
+```
+
+## Gray-code decompositions
 
 ```@docs
 multiplex_angles
