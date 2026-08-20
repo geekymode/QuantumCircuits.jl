@@ -1,6 +1,7 @@
 module QuantumCircuitsMakieExt
 
 using Makie
+using LinearAlgebra: Diagonal
 using QuantumCircuits
 using QuantumCircuits: Circuit, Gate, Instruction, label, nqubits, count_cnots,
                        gray, gray_flip_position, gray_flip_positions
@@ -341,6 +342,136 @@ function QuantumCircuits.graycodefigure(n::Integer=4; theme::Symbol=:light, scal
     linkxaxes!(ax, ax2)
     rowsize!(fig.layout, 2, Relative(0.34))
     rowgap!(fig.layout, 6)
+    fig
+end
+
+# ---------------------------------------------------------------------------
+# Cosine–sine decomposition
+# ---------------------------------------------------------------------------
+
+function QuantumCircuits.csdfigure(U::AbstractMatrix; theme::Symbol=:light, scale::Real=1)
+    p = _palette(theme)
+    F = QuantumCircuits.cosine_sine(U)
+    N = size(U, 1)
+    m = N ÷ 2
+    C = Diagonal(F.c)
+    S = Diagonal(F.s)
+    panels = ["U" => ComplexF64.(U),
+              "L₁ ⊕ L₂" => cat(F.L1, F.L2; dims=(1, 2)),
+              "[C -S; S C]" => ComplexF64.([C -S; S C]),
+              "(R₁ ⊕ R₂)†" => cat(F.R1, F.R2; dims=(1, 2))']
+    subs = ["", "block diagonal → 2 multiplexors",
+            "uniformly controlled RY", "block diagonal → 2 multiplexors"]
+
+    surf = parse(Makie.Colorant, p.surface)
+    muted = parse(Makie.Colorant, p.muted)
+    accent = parse(Makie.Colorant, p.accent)
+    cmap = Makie.cgrad(p.sequential)
+
+    fig = Figure(size=(scale * (170 + 4 * (60 + 11N)), scale * (170 + 11N)),
+                 backgroundcolor=surf)
+    local hm
+    for (i, (name, M)) in enumerate(panels)
+        ax = Axis(fig[1, i]; title=name, titlealign=:center, titlesize=15,
+                  titlecolor=i == 3 ? accent : muted, aspect=DataAspect(),
+                  yreversed=true, backgroundcolor=surf,
+                  subtitle=subs[i], subtitlesize=10, subtitlecolor=muted)
+        hidedecorations!(ax)
+        hidespines!(ax)
+        hm = heatmap!(ax, 1:N, 1:N, permutedims(abs.(M)); colormap=cmap, colorrange=(0, 1))
+        lines!(ax, [0.5, N + 0.5, N + 0.5, 0.5, 0.5], [0.5, 0.5, N + 0.5, N + 0.5, 0.5];
+               color=muted, linewidth=0.8)
+        # the split that defines the decomposition
+        lines!(ax, [m + 0.5, m + 0.5], [0.5, N + 0.5]; color=(muted, 0.8), linewidth=0.8, linestyle=:dash)
+        lines!(ax, [0.5, N + 0.5], [m + 0.5, m + 0.5]; color=(muted, 0.8), linewidth=0.8, linestyle=:dash)
+    end
+    Colorbar(fig[1, length(panels)+1], hm; label="|entry|", labelcolor=muted,
+             ticklabelcolor=muted, height=Relative(0.7))
+    Label(fig[0, :], "cosine–sine decomposition of a $(Int(log2(N)))-qubit unitary";
+          color=muted, fontsize=15, halign=:left, padding=(10, 0, 0, 0))
+    fig
+end
+
+# ---------------------------------------------------------------------------
+# Quantum Shannon decomposition schematic
+# ---------------------------------------------------------------------------
+
+_sup(k::Integer) = join(('⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹')[d+1] for d in digits(k) |> reverse)
+
+function QuantumCircuits.qsdfigure(n::Integer=3; theme::Symbol=:light, scale::Real=1)
+    n >= 2 || throw(ArgumentError("qsdfigure needs at least 2 qubits"))
+    p = _palette(theme)
+    surf = parse(Makie.Colorant, p.surface)
+    ink = parse(Makie.Colorant, p.ink)
+    muted = parse(Makie.Colorant, p.muted)
+    accent = parse(Makie.Colorant, p.accent)
+    accent2 = parse(Makie.Colorant, p.accent2)
+    fillc = parse(Makie.Colorant, p.fill)
+
+    nrows = n                                   # levels n, n-1, … , 1
+    fig = Figure(size=(scale * 1000, scale * (120 + 96nrows)), backgroundcolor=surf)
+    ax = Axis(fig[1, 1]; backgroundcolor=surf, yreversed=true,
+              title="quantum Shannon decomposition: every two-qubit gate comes from a Gray-code multiplexor",
+              titlealign=:left, titlecolor=muted, titlesize=14)
+    hidedecorations!(ax); hidespines!(ax)
+
+    W = 100.0                                   # width of one row, arbitrary units
+    # one level: W_R · RZ · V_R · RY · W_L · RZ · V_L  (4 sub-unitaries, 3 multiplexors)
+    unit_w, mux_w = 15.0, 8.0
+    kinds = [:u, :m, :u, :m, :u, :m, :u]
+    labels_m = ["RZ", "RY", "RZ"]
+    total = 4unit_w + 3mux_w
+    scalex = W / total
+
+    y = 1.0
+    for lvl in n:-1:1
+        k = lvl - 1                             # controls in this level's multiplexors
+        if lvl == 1
+            poly!(ax, Rect2f(0, y - 0.3, W, 0.6); color=fillc, strokecolor=muted, strokewidth=1)
+            text!(ax, Point2f(W/2, y); text="one-qubit gates — ZYZ Euler angles, 0 CNOTs",
+                  align=(:center, :center), fontsize=12, color=ink)
+        else
+            x = 0.0
+            mi = 0
+            for kind in kinds
+                w = (kind === :u ? unit_w : mux_w) * scalex
+                if kind === :u
+                    poly!(ax, Rect2f(x, y - 0.3, w, 0.6); color=fillc,
+                          strokecolor=muted, strokewidth=1)
+                    text!(ax, Point2f(x + w/2, y);
+                          text="U ($(lvl-1) qubit" * (lvl == 2 ? ")" : "s)"),
+                          align=(:center, :center), fontsize=11, color=ink)
+                else
+                    mi += 1
+                    poly!(ax, Rect2f(x, y - 0.34, w, 0.68); color=(accent, 0.16),
+                          strokecolor=accent, strokewidth=1.8)
+                    text!(ax, Point2f(x + w/2, y - 0.09); text=labels_m[mi],
+                          align=(:center, :center), fontsize=11, color=accent)
+                    text!(ax, Point2f(x + w/2, y + 0.14); text="2" * _sup(k),
+                          align=(:center, :center), fontsize=10, color=accent2)
+                end
+                x += w
+            end
+            per = 3 * (1 << k)
+            copies = 4^(n - lvl)
+            text!(ax, Point2f(W + 2, y);
+                  text="× $copies  →  $(copies * per) CNOTs", align=(:left, :center),
+                  fontsize=11, color=muted)
+            text!(ax, Point2f(-2, y); text="level $lvl", align=(:right, :center),
+                  fontsize=11, color=muted)
+            # the arrow from one sub-unitary down to the next level
+            xs = unit_w * scalex / 2
+            lines!(ax, [xs, xs], [y + 0.34, y + 0.66]; color=(muted, 0.9), linewidth=1.2)
+            scatter!(ax, [xs], [y + 0.66]; color=muted, marker=:dtriangle, markersize=8)
+        end
+        y += 1.0
+    end
+    text!(ax, Point2f(-2, n + 0.0); text="level 1", align=(:right, :center),
+          fontsize=11, color=muted)
+    text!(ax, Point2f(0, n + 0.75);
+          text="total  (3/4)·4ⁿ − (3/2)·2ⁿ  =  $(QuantumCircuits.qsd_cnot_count(n)) CNOTs for n = $n",
+          align=(:left, :center), fontsize=13, color=ink)
+    limits!(ax, -18, W + 32, n + 1.2, 0.3)
     fig
 end
 

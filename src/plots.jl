@@ -75,6 +75,35 @@ $_MAKIE_HINT
 graycodefigure(args...; kwargs...) = error("`graycodefigure` ", _MAKIE_HINT)
 
 """
+    csdfigure(U; kwargs...) -> Figure
+
+The cosine–sine decomposition of `U`, as four magnitude heatmaps in a row:
+`U`, the left block-diagonal factor `L₁ ⊕ L₂`, the cosine–sine middle, and the
+right factor `(R₁ ⊕ R₂)†`.
+
+The middle panel is the point: its `[C -S; S C]` pattern is a uniformly
+controlled `RY` on the top wire, i.e. a Gray-code multiplexor, and the two
+outer panels are block-diagonal multiplexors that demultiplex into two more.
+
+$_MAKIE_HINT
+"""
+csdfigure(args...; kwargs...) = error("`csdfigure` ", _MAKIE_HINT)
+
+"""
+    qsdfigure(n=3; kwargs...) -> Figure
+
+Schematic of the quantum Shannon decomposition recursion on `n` qubits: each
+level emits three Gray-code multiplexors — one `RY` from the cosine–sine split,
+one `RZ` from each demultiplexing step — and four `(n-1)`-qubit sub-problems,
+of which the diagram follows one.
+
+Multiplexor boxes carry their CNOT count, and each row its level total.
+
+$_MAKIE_HINT
+"""
+qsdfigure(args...; kwargs...) = error("`qsdfigure` ", _MAKIE_HINT)
+
+"""
     costfigure(ns=1:8; kwargs...) -> Figure
 
 CNOT count versus register size for the package's decompositions against the

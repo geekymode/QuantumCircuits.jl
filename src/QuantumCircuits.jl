@@ -18,6 +18,7 @@ Conventions
 module QuantumCircuits
 
 using LinearAlgebra
+using Random: Random
 using Printf: @sprintf
 
 # Gray code
@@ -46,13 +47,17 @@ export zyz, decompose_1q, decompose_1q!, TwoLevel, two_level_decompose,
        two_level!, synthesize_unitary, demultiplex, multiplexed_1q,
        multiplexed_1q!
 
+# cosine-sine and quantum Shannon decomposition
+export CSD, cosine_sine, csd_angles, qsd, qsd!, qsd_cnot_count, rand_unitary
+
 # applications of Gray coding
 export matrix_root, multicontrolled, multicontrolled!, gray_encoder, gray_decoder,
        increment, increment!, gray_increment, select, select!, support_mask,
        gray_order, truncate_terms
 
 # plotting (implemented by the Makie extension)
-export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure
+export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure,
+       csdfigure, qsdfigure
 
 # phase polynomials
 export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
@@ -67,6 +72,7 @@ include("mathkit.jl")
 include("matrixdecomp.jl")
 include("phasepoly.jl")
 include("applications.jl")
+include("shannon.jl")
 include("plots.jl")
 
 end # module

@@ -120,6 +120,31 @@ count_cnots(synthesize(pp; order = :gadgets))   # 114 — one ladder per term
 count_cnots(synthesize(pp; order = :gray))      #  62 — parity network = 2ⁿ-2, optimal
 ```
 
+### The hardest case: an arbitrary unitary
+
+Hand the compiler a `2ⁿ × 2ⁿ` unitary with no structure at all and you get the
+hardest of the standard problems. The **quantum Shannon decomposition** is the
+answer, and its whole skeleton is Gray-code multiplexors — one level peels the
+top wire with a cosine–sine split plus two demultiplexings, emitting three
+multiplexors and four `(n-1)`-qubit sub-problems:
+
+```julia
+U = rand_unitary(8)
+c = qsd(U)                      # 36 CNOTs, matrix(c) ≈ U exactly
+count_cnots(synthesize_unitary(U; lower = true))   # 98 — the two-level route
+
+cosine_sine(U)                  # U = (L₁⊕L₂)·[C -S; S C]·(R₁⊕R₂)†
+csdfigure(rand_unitary(16))     # ... and what that looks like
+qsdfigure(3)                    # the recursion, with CNOT counts per level
+```
+
+`[C -S; S C]` *is* a uniformly controlled `RY` on the top wire, so every CNOT in
+the output comes from a Gray-code walk. Costs `(3/4)·4ⁿ - (3/2)·2ⁿ`: 36 at
+`n=3`, 168 at `n=4`, against `O(n·4ⁿ)` for the two-level method. See the
+[Hardest case](https://geekymode.github.io/QuantumCircuits.jl/dev/shannon/) page
+— including the numerical trap that makes a naive cosine–sine implementation
+return non-unitary factors on block-diagonal input.
+
 ### More Gray-code applications
 
 Fifteen worked applications, all measured and checked — see the
@@ -139,6 +164,7 @@ A few of the measured results:
 
 | Task | naive | Gray-code |
 |---|---|---|
+| Arbitrary 3-qubit unitary | 98 CNOTs (two-level) | **36** (Shannon) |
 | `C⁵(U)`, no ancillas | multi-controlled decomposition | 31 controlled-`V` + 30 CNOTs |
 | Dense diagonal, `n=7` | 240 CNOTs (gadget per term) | **126** = `2ⁿ-2`, optimal |
 | QAOA cost operator, `n=6` | 258 CNOTs | **62**, same operator |
@@ -205,8 +231,9 @@ true
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
+| Shannon decomposition | `qsd`, `cosine_sine`, `CSD`, `csd_angles`, `qsd_cnot_count`, `rand_unitary` |
 | Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
-| Illustrations (Makie ext) | `circuitfigure`, `circuitplot!`, `matrixfigure`, `graycodefigure`, `costfigure` |
+| Illustrations (Makie ext) | `circuitfigure`, `circuitplot!`, `matrixfigure`, `graycodefigure`, `costfigure`, `csdfigure`, `qsdfigure` |
 
 ## Documentation
 
@@ -234,7 +261,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-1356 tests. Decompositions are checked against reference matrices built straight
+1498 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend:
 
@@ -244,9 +271,9 @@ QC_TEST_PLOTS=true julia --project=docs -e 'using Pkg; Pkg.test("QuantumCircuits
 
 ## Roadmap
 
-* Cosine–sine decomposition, for the full quantum Shannon decomposition of an
-  arbitrary `n`-qubit unitary
-* Two-qubit KAK / Cartan decomposition and optimal 3-CNOT two-qubit synthesis
+* Two-qubit KAK / Cartan decomposition and optimal 3-CNOT two-qubit synthesis —
+  the largest remaining win, taking `qsd` from `(3/4)·4ⁿ` to the standard
+  `(9/16)·4ⁿ`
 * Full GraySynth term-ordering for sparse phase polynomials (the current parity
   network is greedy: it hits the optimum on dense inputs, not always on sparse)
 * More optimisation passes (rotation merging, commutation-aware cancellation)

@@ -1,4 +1,5 @@
-# Fifteen applications of Gray coding in quantum circuit synthesis.
+# Sixteen applications of Gray coding in quantum circuit synthesis,
+# ending with the hardest standard decomposition there is.
 #
 #   julia --project=. examples/gray_applications.jl
 #
@@ -10,7 +11,7 @@ using LinearAlgebra
 using Random
 
 Random.seed!(20260818)
-randu(n) = (F = qr(randn(ComplexF64, n, n)); Matrix(F.Q) * Diagonal(cis.(2π .* rand(n))))
+const randu = rand_unitary
 hdr(i, s) = println("\n", "═"^76, "\n ", i, ". ", s, "\n", "═"^76)
 ok(x) = x ? "✓" : "✗ MISMATCH"
 
@@ -275,6 +276,44 @@ println("\n a dense random 3-qubit Hamiltonian: ", length(terms), " Pauli terms,
 println(" fidelity vs exp(-iH·dt): ",
         round(gate_fidelity(matrix(c), exp(-im * 0.02 * Hm)), digits=6))
 
+# ---------------------------------------------------------------------------
+hdr(16, "The hardest case: an arbitrary unitary (quantum Shannon decomposition)")
+
+println(" One level peels the top wire with a cosine–sine split and two")
+println(" demultiplexings, emitting THREE Gray-code multiplexors — RY from the")
+println(" cosine–sine middle, RZ from each side — and four (n-1)-qubit unitaries.\n")
+
+U = randu(8)
+F = cosine_sine(U)
+println(" cosine–sine of an 8×8 unitary reconstructs: ",
+        ok(Matrix(F) ≈ U), "    c²+s² = 1: ", ok(F.c .^ 2 .+ F.s .^ 2 ≈ ones(4)))
+println(" middle factor IS a uniformly controlled RY: ",
+        ok(matrix(multiplexed_ry(csd_angles(F), 2:3, 1; n = 3)) ≈
+           [Diagonal(F.c) -Diagonal(F.s); Diagonal(F.s) Diagonal(F.c)]))
+
+println("\n n | QSD CNOTs | (3/4)4ⁿ-(3/2)2ⁿ | two-level route | exact | elementary")
+for n in 1:4
+    local V = randu(1 << n)
+    local c = qsd(V)
+    local tl = n <= 3 ? string(count_cnots(synthesize_unitary(V; lower = true))) : "(too big)"
+    println(lpad(n, 2), " | ", lpad(count_cnots(c), 9), " | ", lpad(qsd_cnot_count(n), 16),
+            " | ", lpad(tl, 15), " | ", lpad(ok(matrix(c) ≈ V), 5),
+            " | ", ok(all(length(op.qubits) <= 2 for op in c.ops)))
+end
+
+println("\n the numerical trap: sines must NOT come from sqrt(1-c²).")
+Fb = cosine_sine(cat(randu(4), randu(4); dims = (1, 2)))
+println("   block-diagonal input → all sines exactly zero: ", ok(maximum(Fb.s) < 1e-12))
+println("   factors still unitary:                         ",
+        ok(all(is_unitary(M) for M in (Fb.L1, Fb.L2, Fb.R1, Fb.R2))))
+
+println("\n structure-blind, by design: identity costs the same as Haar-random —")
+println("   identity(8): ", count_cnots(qsd(Matrix{ComplexF64}(I, 8, 8))), " CNOTs    ",
+        "haar(8): ", count_cnots(qsd(randu(8))), " CNOTs")
+println("   use diagonal(), prepare_state() or multiplexed_1q() when you know more.")
+
 println("\n", "═"^76)
-println(" Illustrations of all of the above:  using CairoMakie; circuitfigure(c)")
+println(" Illustrations:  using CairoMakie")
+println("   circuitfigure(qsd(rand_unitary(4)))   csdfigure(rand_unitary(16))")
+println("   qsdfigure(3)   graycodefigure(4)   costfigure(2:9)")
 println("═"^76)

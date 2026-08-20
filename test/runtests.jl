@@ -5,9 +5,8 @@ using Random
 
 Random.seed!(20260817)
 
-"""Haar-ish random unitary, for checking decompositions."""
-randu(n::Integer) = (F = qr(randn(ComplexF64, n, n));
-                     Matrix(F.Q) * Diagonal(cis.(2π .* rand(n))))
+"""Haar random unitary, for checking decompositions."""
+const randu = rand_unitary
 
 """Block-diagonal reference for a uniformly controlled one-qubit gate."""
 function ref_multiplexed_gate(Us, controls, target, n)
@@ -39,5 +38,6 @@ end
     include("test_matrixdecomp.jl")
     include("test_phasepoly.jl")
     include("test_applications.jl")
+    include("test_shannon.jl")
     include("test_plots.jl")
 end

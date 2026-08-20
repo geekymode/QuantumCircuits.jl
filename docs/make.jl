@@ -21,6 +21,7 @@ makedocs(
         "Gray coding"   => "graycode.md",
         "Linear algebra" => "math.md",
         "Applications"  => "applications.md",
+        "Hardest case"  => "shannon.md",
         "Illustrations" => "plots.md",
         "API reference" => "api.md",
     ],
