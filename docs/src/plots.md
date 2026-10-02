@@ -108,6 +108,16 @@ the cycle.
 costfigure(2:9)
 ```
 
+## Three-query convergence
+
+```@example plots
+threequeryfigure()
+```
+
+The [Depth and width](@ref "Trading depth for width") page explains the
+identity. Both convergent curves fall at about twice the proven exponent; the
+trace-1 curve never moves.
+
 ## Reference
 
 ```@docs
@@ -116,4 +126,5 @@ circuitplot!
 matrixfigure
 graycodefigure
 costfigure
+threequeryfigure
 ```

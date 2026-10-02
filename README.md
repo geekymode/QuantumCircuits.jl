@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 1824 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 1862 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -228,6 +228,28 @@ c = embedding_circuit(qsd(S))     # any circuit for S, wrapped
 implementation_error(c, U)        # ~1e-14, ancillas returned clean
 ```
 
+### Three-query synthesis
+
+The core identity of Nehoran–Yuen: for a real, symmetric, traceless unitary
+`S`, encode the input one-hot in `N` discretised harmonic oscillators, and
+
+```
+S ≈ i Ê† Q̂ F̂ Q̂ F̂ Q̂ Ê        Q̂ = chirp e^{i vᵀSv/2},  F̂ = Fourier on every register
+```
+
+with error falling exponentially in the grid size `K`. A reference
+implementation simulates the registers directly:
+
+```julia
+three_query_error([0 1; 1 0.], K)        # K = 8, 16, 32:  8.7e-3, 2.1e-5, 9.9e-11
+three_query_synthesis(U, K)              # any U: embed, three queries, read back
+```
+
+The measured rate is about `e^{-πK/4}`, twice the paper's proven `e^{-πK/8}`;
+dropping `Tr S = 0` makes the error stall at ~0.77. See the
+[Depth and width](https://geekymode.github.io/QuantumCircuits.jl/dev/parallel/)
+page.
+
 ### Illustrations
 
 Plotting is a package extension — it loads when a Makie backend is present and
@@ -282,6 +304,7 @@ true
 | Ancillas | `add_ancillas!`, `ancillas`, `data_qubits`, `isometry`, `logical_matrix`, `leakage`, `is_clean`, `implementation_error` |
 | Fan-out, parity, AND | `fanout!`, `parity!`, `and!` |
 | Real symmetric embeddings | `realify`, `hermitian_dilation`, `symmetric_embedding`, `embedding_circuit` |
+| Three-query synthesis | `three_query`, `three_query_error`, `three_query_synthesis`, `qho_encoding`, `chirp_phases`, `centered_dft` |
 | Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
@@ -316,12 +339,14 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-1824 tests. Decompositions are checked against reference matrices built straight
+1862 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
-global phase and exact CNOT counts. Plot tests need a Makie backend:
+global phase and exact CNOT counts. Plot tests need a Makie backend, so they
+run in the docs environment (set up as above). `Pkg.test` would sandbox the
+tests away from CairoMakie, so run the test script directly:
 
 ```
-QC_TEST_PLOTS=true julia --project=docs -e 'using Pkg; Pkg.test("QuantumCircuits")'
+QC_TEST_PLOTS=true julia --project=docs test/runtests.jl
 ```
 
 ## Roadmap

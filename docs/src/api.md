@@ -102,6 +102,17 @@ symmetric_embedding
 embedding_circuit
 ```
 
+## Three-query synthesis
+
+```@docs
+three_query
+three_query_error
+three_query_synthesis
+qho_encoding
+chirp_phases
+centered_dft
+```
+
 ## Fan-out, parity and AND
 
 ```@docs

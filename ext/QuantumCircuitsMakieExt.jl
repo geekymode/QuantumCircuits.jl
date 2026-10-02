@@ -513,4 +513,53 @@ function QuantumCircuits.costfigure(ns=2:9; theme::Symbol=:light, scale::Real=1)
     fig
 end
 
+# ---------------------------------------------------------------------------
+# Three-query convergence
+# ---------------------------------------------------------------------------
+
+function QuantumCircuits.threequeryfigure(Ks=4:4:36; theme::Symbol=:light, scale::Real=1)
+    p = _palette(theme)
+    xs = collect(Ks)
+    all(>=(2), xs) || throw(ArgumentError("grid sizes must be at least 2"))
+    floor_ = 1e-16                                          # keep log scale finite
+
+    X2 = [0.0 1.0; 1.0 0.0]
+    S4 = symmetric_embedding(fill(cis(0.7), 1, 1))
+    v = [1.0, 2.0, 2.0] ./ 3
+    St = [1.0 0 0; 0 1 0; 0 0 1] .- 2 .* v .* v'             # reflection, trace 1
+    err(S; kw...) = [max(three_query_error(S, K; kw...), floor_) for K in xs]
+    eX, e4, et = err(X2), err(S4), err(St; check=false)
+
+    surf = parse(Makie.Colorant, p.surface)
+    muted = parse(Makie.Colorant, p.muted)
+    ink = parse(Makie.Colorant, p.ink)
+    accent = parse(Makie.Colorant, p.accent)
+    accent2 = parse(Makie.Colorant, p.accent2)
+
+    fig = Figure(size=(scale * 620, scale * 400), backgroundcolor=surf)
+    ax = Axis(fig[1, 1]; title="Three-query synthesis: error vs grid size",
+              titlealign=:left, titlecolor=muted, backgroundcolor=surf, yscale=log10,
+              xlabel="grid points per register K", ylabel="operator-norm error (log scale)",
+              xlabelcolor=muted, ylabelcolor=muted,
+              xticklabelcolor=muted, yticklabelcolor=muted,
+              xticks=xs, ygridcolor=(muted, 0.18), xgridvisible=false)
+    hidespines!(ax, :t, :r)
+
+    # rate guides, anchored to the Pauli-X curve at its second point
+    k0 = xs[min(2, end)]; e0 = eX[min(2, end)]
+    for (rate, lbl, ls) in ((π / 8, "proven rate e^(−πK/8)", :dash),
+                            (π / 4, "observed rate e^(−πK/4)", :dot))
+        g = [max(e0 * exp(-rate * (K - k0)), floor_) for K in xs]
+        lines!(ax, xs, g; color=(muted, 0.7), linewidth=1.5, linestyle=ls, label=lbl)
+    end
+    for (lbl, ys, col, ls) in (("Pauli X, N = 2", eX, accent, :solid),
+                               ("embedded phase, N = 4", e4, ink, :solid),
+                               ("trace-1 involution, N = 3", et, accent2, :solid))
+        lines!(ax, xs, ys; color=col, linewidth=2, linestyle=ls, label=lbl)
+        scatter!(ax, xs, ys; color=col, markersize=8)
+    end
+    axislegend(ax; position=:lb, framevisible=false, labelcolor=muted, labelsize=11)
+    fig
+end
+
 end # module

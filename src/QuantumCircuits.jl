@@ -40,6 +40,10 @@ export add_ancillas!, ancillas, data_qubits, isometry, logical_matrix,
 # embeddings in real symmetric involutions
 export realify, hermitian_dilation, symmetric_embedding, embedding_circuit
 
+# three-query synthesis
+export three_query, three_query_error, three_query_synthesis, centered_dft,
+       qho_encoding, chirp_phases
+
 # fan-out and parity
 export fanout!, parity!, and!
 
@@ -67,7 +71,7 @@ export matrix_root, multicontrolled, multicontrolled!, gray_encoder, gray_decode
 
 # plotting (implemented by the Makie extension)
 export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure,
-       csdfigure, qsdfigure
+       csdfigure, qsdfigure, threequeryfigure
 
 # phase polynomials
 export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
@@ -85,6 +89,7 @@ include("phasepoly.jl")
 include("applications.jl")
 include("shannon.jl")
 include("embeddings.jl")
+include("threequery.jl")
 include("plots.jl")
 
 end # module

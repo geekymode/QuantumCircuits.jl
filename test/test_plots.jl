@@ -30,6 +30,9 @@
         @test circuitfigure(qsd(rand_unitary(4))) isa Makie.Figure
         @test_throws ArgumentError qsdfigure(1)
         @test costfigure(2:6) isa Makie.Figure
+        @test threequeryfigure(4:4:16) isa Makie.Figure
+        @test threequeryfigure(4:4:12; theme=:dark) isa Makie.Figure
+        @test_throws ArgumentError threequeryfigure([1, 4])
         @test_throws ArgumentError matrixfigure(U; part=:nope)
         @test_throws ArgumentError circuitfigure(circuits[1]; theme=:neon)
     end
@@ -38,7 +41,8 @@ end
 @testset "plotting stubs without a backend" begin
     # the error must name the fix, not just fail
     if get(ENV, "QC_TEST_PLOTS", "false") != "true"
-        for f in (circuitfigure, matrixfigure, graycodefigure, costfigure, csdfigure, qsdfigure)
+        for f in (circuitfigure, matrixfigure, graycodefigure, costfigure, csdfigure, qsdfigure,
+                  threequeryfigure)
             e = try; f(Circuit(1)); catch err; err; end
             @test e isa ErrorException
             @test occursin("CairoMakie", e.msg)

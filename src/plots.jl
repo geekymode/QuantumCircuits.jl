@@ -112,3 +112,16 @@ naive `O(n 2ⁿ)` compilation, on a log scale.
 $_MAKIE_HINT
 """
 costfigure(args...; kwargs...) = error("`costfigure` ", _MAKIE_HINT)
+
+"""
+    threequeryfigure(Ks=4:4:36; kwargs...) -> Figure
+
+Error of Nehoran and Yuen's three-query identity ([`three_query_error`](@ref))
+against grid size `K`, on a log scale, for three fixed targets: Pauli `X`, the
+4 × 4 [`symmetric_embedding`](@ref) of a phase, and a 3 × 3 involution with
+trace 1.  Dashed guides show the proven rate `e^{-πK/8}` and the observed
+`e^{-πK/4}`; the trace-1 curve shows the identity failing without `Tr S = 0`.
+
+$_MAKIE_HINT
+"""
+threequeryfigure(args...; kwargs...) = error("`threequeryfigure` ", _MAKIE_HINT)
