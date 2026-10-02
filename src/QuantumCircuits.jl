@@ -27,11 +27,14 @@ export gray, ungray, graycode, gray_flip_position, gray_flip_positions,
 
 # gates
 export Gate, Id, X, Y, Z, H, S, Sdg, T, Tdg, RX, RY, RZ, PHASE,
-       CNOT, CZ, SWAP, controlled, label
+       CNOT, CZ, SWAP, FANOUT, PARITY, controlled, label
 
 # circuits
 export Circuit, Instruction, nqubits, matrix, statevector, zero_state,
-       apply!, draw, count_gates, count_cnots
+       apply!, draw, count_gates, count_cnots, depth, layers
+
+# fan-out and parity
+export fanout!, parity!
 
 # decompositions
 export multiplex_angles, multiplex_matrix, multiplexed_rotation!,
@@ -67,6 +70,7 @@ export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
 include("graycode.jl")
 include("gates.jl")
 include("circuit.jl")
+include("fanout.jl")
 include("decompose.jl")
 include("mathkit.jl")
 include("matrixdecomp.jl")

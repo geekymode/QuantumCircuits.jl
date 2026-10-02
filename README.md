@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 750 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 1673 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -176,6 +176,34 @@ does not reduce CNOTs, because each term's basis-change gates block ladder
 cancellation. The win comes from pooling commuting terms, not reordering
 non-commuting ones — the docs show the measurement.
 
+### Depth and fan-out
+
+CNOT count is not the only cost: gates on disjoint wires run in parallel, and
+`depth` measures how long the circuit takes when they do. The same CNOTs,
+arranged as a doubling tree instead of a ladder, run in logarithmic depth:
+
+```julia
+c = phase_gadget(0.3, 1:8; style=:tree)    # exp(-iθ/2 Z⊗…⊗Z) on 8 qubits
+count_cnots(c), depth(c)                   # (14, 7) — the ladder is (14, 15)
+depth(c, :CNOT)                            # CNOT depth only
+
+fanout!(Circuit(17), 1, 2:17)              # copy one bit to 16 wires: depth 9, not 16
+parity!(c, [1, 2, 3], 4)                   # its mirror image
+fanout!(c, 1, 2:5; style=:gate)            # one FANOUT gate: depth 1
+```
+
+| 8-qubit phase gadget | CNOTs | depth |
+|---|---|---|
+| `style=:ladder` | 14 | 15 |
+| `style=:tree` | 14 | **7** |
+| `style=:gate` (unit-cost parity gates) | 0 | **3** |
+
+`style=:gate` is the *unbounded fan-out* model, in which
+[Nehoran and Yuen](https://arxiv.org/abs/2609.40351) show that every unitary
+has a constant-depth circuit (given exponentially many ancillas). Fan-out and
+parity gates are stored as dense matrices, so they are capped at 11 wires;
+the `:tree` style has no cap.
+
 ### Illustrations
 
 Plotting is a package extension — it loads when a Makie backend is present and
@@ -225,8 +253,9 @@ true
 | | |
 |---|---|
 | Gray code | `gray`, `ungray`, `graycode`, `gray_flip_position`, `gray_flip_positions`, `gray_adjacent`, `gray_walk`, `hamming`, `parity`, `bits` |
-| Gates | `Id`, `X`, `Y`, `Z`, `H`, `S`, `Sdg`, `T`, `Tdg`, `RX`, `RY`, `RZ`, `PHASE`, `CNOT`, `CZ`, `SWAP`, `controlled` |
-| Circuits | `Circuit`, `push!`, `append!`, `matrix`, `statevector`, `zero_state`, `apply!`, `draw`, `count_cnots`, `count_gates` |
+| Gates | `Id`, `X`, `Y`, `Z`, `H`, `S`, `Sdg`, `T`, `Tdg`, `RX`, `RY`, `RZ`, `PHASE`, `CNOT`, `CZ`, `SWAP`, `FANOUT`, `PARITY`, `controlled` |
+| Circuits | `Circuit`, `push!`, `append!`, `matrix`, `statevector`, `zero_state`, `apply!`, `draw`, `count_cnots`, `count_gates`, `depth`, `layers` |
+| Fan-out and parity | `fanout!`, `parity!` |
 | Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
@@ -261,7 +290,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-1498 tests. Decompositions are checked against reference matrices built straight
+1673 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend:
 

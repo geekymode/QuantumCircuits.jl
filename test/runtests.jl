@@ -36,6 +36,7 @@ end
     include("test_decompose.jl")
     include("test_mathkit.jl")
     include("test_matrixdecomp.jl")
+    include("test_fanout.jl")
     include("test_phasepoly.jl")
     include("test_applications.jl")
     include("test_shannon.jl")

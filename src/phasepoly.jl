@@ -14,35 +14,60 @@
 # ---------------------------------------------------------------------------
 
 """
-    phase_gadget!(c, θ, qubits) -> c
+    phase_gadget!(c, θ, qubits; style=:ladder) -> c
 
-Append `exp(-im*θ/2 * Z⊗Z⊗…)` over `qubits`: a CNOT ladder collecting the
-parity onto the last wire, `RZ(θ)` there, and the ladder reversed.
+Append `exp(-im*θ/2 * Z⊗Z⊗…)` over `qubits`: collect the parity onto the last
+wire, `RZ(θ)` there, and undo the collection.
 
-Uses `2(k-1)` CNOTs for `k` qubits — and none at all for `k == 1`, where it is
-just a rotation.
+`style` chooses how the parity is collected (see [`fanout!`](@ref)):
+
+| `style`   | CNOTs      | depth             |
+|:----------|:-----------|:------------------|
+| `:ladder` | `2(k - 1)` | `2k - 1`          |
+| `:tree`   | `2(k - 1)` | `2⌈log₂ k⌉ + 1`   |
+| `:gate`   | `0`        | `3` (two [`PARITY`](@ref) gates) |
+
+for `k` qubits.  The tree costs no extra CNOTs here because the parity is
+collected in place rather than onto a separate wire.  A single qubit is just a
+rotation.
 """
-function phase_gadget!(c::Circuit, θ::Real, qubits::AbstractVector{<:Integer})
+function phase_gadget!(c::Circuit, θ::Real, qubits::AbstractVector{<:Integer};
+                       style::Symbol=:ladder)
+    _check_style(style)
     qs = collect(Int, qubits)
     isempty(qs) && throw(ArgumentError("a phase gadget needs at least one qubit"))
     allunique(qs) || throw(ArgumentError("repeated qubit in $qs"))
-    for i in 1:length(qs)-1
-        push!(c, CNOT(), qs[i], qs[i+1])
-    end
-    push!(c, RZ(θ), qs[end])
-    for i in length(qs)-1:-1:1
-        push!(c, CNOT(), qs[i], qs[i+1])
+    if length(qs) == 1
+        push!(c, RZ(θ), qs[1])
+    elseif style === :ladder
+        for i in 1:length(qs)-1
+            push!(c, CNOT(), qs[i], qs[i+1])
+        end
+        push!(c, RZ(θ), qs[end])
+        for i in length(qs)-1:-1:1
+            push!(c, CNOT(), qs[i], qs[i+1])
+        end
+    elseif style === :tree
+        w = reverse(qs)                       # root the tree at the last wire
+        _collect_tree!(c, w)
+        push!(c, RZ(θ), qs[end])
+        _collect_tree!(c, w; inverse=true)
+    else
+        push!(c, PARITY(length(qs) - 1), qs...)
+        push!(c, RZ(θ), qs[end])
+        push!(c, PARITY(length(qs) - 1), qs...)
     end
     c
 end
 
 """
-    phase_gadget(θ, qubits; n) -> Circuit
+    phase_gadget(θ, qubits; n, style=:ladder) -> Circuit
 
 Standalone circuit for [`phase_gadget!`](@ref).
 """
-phase_gadget(θ::Real, qubits::AbstractVector{<:Integer}; n::Integer=maximum(qubits)) =
-    phase_gadget!(Circuit(n), θ, qubits)
+phase_gadget(θ::Real, qubits::AbstractVector{<:Integer}; n::Integer=maximum(qubits),
+             style::Symbol=:ladder) =
+    phase_gadget!(Circuit(n), θ, qubits; style=style)
 
 # basis changes mapping each Pauli onto Z: U P U† = Z, applied as U … U†
 _basis_in(::Val{'X'}) = (H(),)
@@ -51,17 +76,19 @@ _basis_out(::Val{'X'}) = (H(),)
 _basis_out(::Val{'Y'}) = (H(), S())
 
 """
-    pauli_rotation!(c, θ, s; qubits=1:length(s)) -> c
+    pauli_rotation!(c, θ, s; qubits=1:length(s), style=:ladder) -> c
 
 Append `exp(-im*θ/2 * P)` for the Pauli string `s` (e.g. `"XIZY"`) acting on
 `qubits`.
 
 Identity factors are skipped; `X` and `Y` factors are conjugated onto the `Z`
-axis, and what remains is one [`phase_gadget!`](@ref). This is the elementary
-term of a Trotter step — see [`trotter_step!`](@ref).
+axis, and what remains is one [`phase_gadget!`](@ref), built in the given
+`style`. This is the elementary term of a Trotter step — see
+[`trotter_step!`](@ref).
 """
 function pauli_rotation!(c::Circuit, θ::Real, s::AbstractString;
-                         qubits::AbstractVector{<:Integer}=1:length(s))
+                         qubits::AbstractVector{<:Integer}=1:length(s),
+                         style::Symbol=:ladder)
     qs = collect(Int, qubits)
     length(qs) == length(s) || throw(ArgumentError("Pauli string \"$s\" needs $(length(s)) qubits, got $(length(qs))"))
     support = Int[]
@@ -81,7 +108,7 @@ function pauli_rotation!(c::Circuit, θ::Real, s::AbstractString;
         return c
     end
     for (g, q) in pre;  push!(c, g, q); end
-    phase_gadget!(c, θ, support)
+    phase_gadget!(c, θ, support; style=style)
     for (g, q) in post; push!(c, g, q); end
     c
 end

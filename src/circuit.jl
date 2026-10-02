@@ -77,6 +77,45 @@ figure of merit every decomposition in this package is trying to minimise.
 """
 count_cnots(c::Circuit) = count_gates(c, :CNOT)
 
+"""
+    depth(c) -> Int
+    depth(c, name) -> Int
+
+Number of time steps when every gate runs as early as its wires allow (ASAP
+scheduling), i.e. the longest chain of gates sharing wires.
+
+With a gate `name`, only those gates cost a step and the rest are free:
+`depth(c, :CNOT)` is the CNOT depth.  A [`FANOUT`](@ref) or [`PARITY`](@ref)
+gate counts as one step however many wires it touches.
+"""
+function depth(c::Circuit, name::Union{Symbol,Nothing}=nothing)
+    level = zeros(Int, c.nqubits)
+    for op in c.ops
+        l = maximum(level[q] for q in op.qubits) + (name === nothing || op.gate.name === name)
+        level[op.qubits] .= l
+    end
+    maximum(level; init=0)
+end
+
+"""
+    layers(c) -> Vector{Vector{Instruction}}
+
+The ASAP schedule behind [`depth`](@ref): layer `t` holds the instructions
+that run at step `t`.  Instructions within a layer act on disjoint wires, so
+they commute and can run in parallel.
+"""
+function layers(c::Circuit)
+    level = zeros(Int, c.nqubits)
+    out = Vector{Instruction}[]
+    for op in c.ops
+        l = maximum(level[q] for q in op.qubits) + 1
+        level[op.qubits] .= l
+        l > length(out) && push!(out, Instruction[])
+        push!(out[l], op)
+    end
+    out
+end
+
 # --- simulation ------------------------------------------------------------
 
 # Index of the basis state obtained from `base` by setting the gate-local
@@ -194,6 +233,12 @@ function draw(io::IO, c::Circuit)
             labels[q[1]] = "●"; labels[q[2]] = "●"
         elseif g.name === :SWAP
             labels[q[1]] = "×"; labels[q[2]] = "×"
+        elseif g.name === :FANOUT
+            labels[q[1]] = "●"
+            for qq in q[2:end]; labels[qq] = "⊕"; end
+        elseif g.name === :PARITY
+            for qq in q[1:end-1]; labels[qq] = "●"; end
+            labels[q[end]] = "⊕"
         elseif length(q) == 1
             labels[q[1]] = label(g)
         else

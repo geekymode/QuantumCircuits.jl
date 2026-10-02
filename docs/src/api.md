@@ -59,6 +59,8 @@ PHASE
 CNOT
 CZ
 SWAP
+FANOUT
+PARITY
 ```
 
 ## Circuits
@@ -74,6 +76,15 @@ apply!
 draw
 count_gates
 count_cnots
+depth
+layers
+```
+
+## Fan-out and parity
+
+```@docs
+fanout!
+parity!
 ```
 
 ## Linear algebra
