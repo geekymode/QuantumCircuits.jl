@@ -64,6 +64,9 @@ export zyz, decompose_1q, decompose_1q!, TwoLevel, two_level_decompose,
        two_level!, synthesize_unitary, demultiplex, multiplexed_1q,
        multiplexed_1q!
 
+# two-qubit (KAK) decomposition
+export KAK, kak, canonical_gate, two_qubit, two_qubit!
+
 # cosine-sine and quantum Shannon decomposition
 export CSD, cosine_sine, csd_angles, qsd, qsd!, qsd_cnot_count, rand_unitary
 
@@ -90,6 +93,7 @@ include("mathkit.jl")
 include("matrixdecomp.jl")
 include("phasepoly.jl")
 include("applications.jl")
+include("kak.jl")
 include("shannon.jl")
 include("embeddings.jl")
 include("qft.jl")

@@ -90,12 +90,13 @@ $_MAKIE_HINT
 csdfigure(args...; kwargs...) = error("`csdfigure` ", _MAKIE_HINT)
 
 """
-    qsdfigure(n=3; kwargs...) -> Figure
+    qsdfigure(n=3; kak=true, kwargs...) -> Figure
 
 Schematic of the quantum Shannon decomposition recursion on `n` qubits: each
 level emits three Gray-code multiplexors — one `RY` from the cosine–sine split,
 one `RZ` from each demultiplexing step — and four `(n-1)`-qubit sub-problems,
-of which the diagram follows one.
+of which the diagram follows one.  The recursion stops at two-qubit KAK blocks,
+or with `kak=false` at one-qubit gates, matching [`qsd`](@ref).
 
 Multiplexor boxes carry their CNOT count, and each row its level total.
 
