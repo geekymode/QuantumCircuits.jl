@@ -138,7 +138,7 @@ _pauli_from_symp(v::AbstractVector) = (n = length(v) ÷ 2; PauliOp(v[1:n], v[n+1
 # --- stabilizer codes --------------------------------------------------------
 
 """
-    StabilizerCode(stabilizers; logical_x, logical_z, name="")
+    StabilizerCode(stabilizers; logical_x, logical_z, name="", distance=nothing)
 
 The code fixed by commuting, independent, Hermitian Pauli `stabilizers` on
 `n` qubits: `k = n - r` logical qubits for `r` generators.
@@ -149,17 +149,19 @@ by symplectic Gram–Schmidt on the normalizer; CSS codes ([`css_code`](@ref))
 get pure-`X` and pure-`Z` logicals.
 
 `length(code)` is `n`; [`dimension`](@ref) is `k`; [`code_distance`](@ref)
-is `d`.
+is `d`.  A known `distance` can be recorded (the catalogue does) so that
+simulations need not search for it; `code_distance` always searches.
 """
 struct StabilizerCode
     stabilizers::Vector{PauliOp}
     logical_x::Vector{PauliOp}
     logical_z::Vector{PauliOp}
     name::String
+    distance::Union{Int,Nothing}      # known distance, if recorded
 end
 
 function StabilizerCode(stabs::AbstractVector; logical_x=nothing, logical_z=nothing,
-                        name::AbstractString="")
+                        name::AbstractString="", distance::Union{Integer,Nothing}=nothing)
     S = [s isa PauliOp ? s : PauliOp(s) for s in stabs]
     isempty(S) && throw(ArgumentError("need at least one stabilizer"))
     n = length(S[1])
@@ -176,7 +178,7 @@ function StabilizerCode(stabs::AbstractVector; logical_x=nothing, logical_z=noth
         LX = [p isa PauliOp ? p : PauliOp(p) for p in logical_x]
         LZ = [p isa PauliOp ? p : PauliOp(p) for p in logical_z]
     end
-    code = StabilizerCode(S, LX, LZ, String(name))
+    code = StabilizerCode(S, LX, LZ, String(name), distance === nothing ? nothing : Int(distance))
     _check_logicals(code)
     code
 end
@@ -342,16 +344,21 @@ at the default.  Correct by applying the table's Pauli: if the real error had
 weight ≤ `maxweight`, the product is a stabilizer.
 """
 function lookup_decoder(c::StabilizerCode; maxweight::Integer=1)
-    n = length(c)
-    table = Dict{BitVector,PauliOp}(falses(length(c.stabilizers)) => PauliOp(falses(n), falses(n)))
+    n, r = length(c), length(c.stabilizers)
+    n <= 64 || throw(ArgumentError("lookup_decoder supports n ≤ 64"))
+    stabs = [_packed(s) for s in c.stabilizers]
+    table = Dict{BitVector,PauliOp}(falses(r) => PauliOp(falses(n), falses(n)))
     for t in 1:maxweight
         for pos in _combinations(n, t), kinds in Iterators.product(ntuple(_ -> 1:3, t)...)
-            x = falses(n); z = falses(n)
+            ex = UInt64(0); ez = UInt64(0)
             for (q, kd) in zip(pos, kinds)
-                x[q] = kd != 3; z[q] = kd != 1
+                kd != 3 && (ex |= UInt64(1) << (q - 1))
+                kd != 1 && (ez |= UInt64(1) << (q - 1))
             end
-            E = PauliOp(x, z)
-            get!(table, syndrome(c, E), E)
+            s = BitVector([isodd(count_ones(ex & sz) + count_ones(ez & sx)) for (sx, sz) in stabs])
+            haskey(table, s) && continue
+            table[s] = PauliOp(BitVector([(ex >> (j - 1)) & 1 == 1 for j in 1:n]),
+                               BitVector([(ez >> (j - 1)) & 1 == 1 for j in 1:n]))
         end
     end
     table
@@ -360,19 +367,20 @@ end
 # --- the catalogue -----------------------------------------------------------
 
 """
-    css_code(Hx, Hz; name="") -> StabilizerCode
+    css_code(Hx, Hz; name="", distance=nothing) -> StabilizerCode
 
 The CSS code with `X`-type stabilizers from the rows of `Hx` and `Z`-type
 from the rows of `Hz` (which must satisfy `Hx Hzᵀ = 0`).  `Z` errors are
 caught by `Hx`, `X` errors by `Hz`.
 """
-function css_code(Hx::AbstractMatrix, Hz::AbstractMatrix; name::AbstractString="")
+function css_code(Hx::AbstractMatrix, Hz::AbstractMatrix; name::AbstractString="",
+                  distance::Union{Integer,Nothing}=nothing)
     size(Hx, 2) == size(Hz, 2) || throw(ArgumentError("Hx and Hz have different lengths"))
     any(_gf2mul(Hx, permutedims(_gf2(Hz)))) && throw(ArgumentError("Hx Hzᵀ ≠ 0: the checks do not commute"))
     n = size(Hx, 2)
     S = vcat([PauliOp(_gf2(Hx[i, :]), falses(n)) for i in 1:size(Hx, 1)],
              [PauliOp(falses(n), _gf2(Hz[i, :])) for i in 1:size(Hz, 1)])
-    StabilizerCode(S; name=name)
+    StabilizerCode(S; name=name, distance=distance)
 end
 
 """
@@ -386,7 +394,7 @@ function repetition_code(n::Integer)
     n >= 2 || throw(ArgumentError("need at least 2 qubits"))
     S = [PauliOp(falses(n), BitVector(j in (i, i + 1) for j in 1:n)) for i in 1:n-1]
     StabilizerCode(S; logical_x=[PauliOp("X"^n)], logical_z=[PauliOp("Z" * "I"^(n - 1))],
-                   name="repetition code")
+                   name="repetition code", distance=1)
 end
 
 """
@@ -396,7 +404,7 @@ The `[[5, 1, 3]]` code, the smallest that corrects any single-qubit error:
 stabilizers `XZZXI` and its cyclic shifts.  Not CSS.
 """
 five_qubit_code() = StabilizerCode(["XZZXI", "IXZZX", "XIXZZ", "ZXIXZ"];
-                                   logical_x=["XXXXX"], logical_z=["ZZZZZ"], name="five-qubit code")
+                                   logical_x=["XXXXX"], logical_z=["ZZZZZ"], name="five-qubit code", distance=3)
 
 """
     shor_code() -> StabilizerCode
@@ -408,7 +416,7 @@ code here.  Textbooks often swap them (`X̄ = Z⊗9`), which exchanges `|0̄⟩`
 with `|+̄⟩`; it is the same code.
 """
 shor_code() = StabilizerCode(["ZZIIIIIII", "IZZIIIIII", "IIIZZIIII", "IIIIZZIII",
-                              "IIIIIIZZI", "IIIIIIIZZ", "XXXXXXIII", "IIIXXXXXX"]; name="Shor code")
+                              "IIIIIIZZI", "IIIIIIIZZ", "XXXXXXIII", "IIIXXXXXX"]; name="Shor code", distance=3)
 
 """
     steane_code() -> StabilizerCode
@@ -419,7 +427,7 @@ Steane's `[[7, 1, 3]]` code: the CSS code of the `[7, 4, 3]` Hamming code
 """
 function steane_code()
     H = parity_check_matrix(hamming_code(3))
-    css_code(H, H; name="Steane code")
+    css_code(H, H; name="Steane code", distance=3)
 end
 
 """
@@ -437,7 +445,7 @@ function quantum_reed_muller(m::Integer)
     row(S) = BitVector([(x & S) == S for x in pts])
     Hx = BitMatrix(reduce(vcat, permutedims(row(S)) for S in _monomials(1, m) if count_ones(S) == 1))
     Hz = BitMatrix(reduce(vcat, permutedims(row(S)) for S in _monomials(m - 2, m) if count_ones(S) >= 1))
-    css_code(Hx, Hz; name="quantum Reed–Muller code")
+    css_code(Hx, Hz; name="quantum Reed–Muller code", distance=3)
 end
 
 """
@@ -467,5 +475,5 @@ function rotated_surface_code(d::Integer)
         end
         push!(S, isX ? PauliOp(v, falses(n)) : PauliOp(falses(n), v))
     end
-    StabilizerCode(S; name="rotated surface code")
+    StabilizerCode(S; name="rotated surface code", distance=d)
 end

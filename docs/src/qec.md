@@ -159,10 +159,57 @@ So `T⊗15` is exactly a logical `T†` — the property that makes this code th
 workhorse of magic-state distillation. The Steane code, its `m = 3` sibling,
 has weights `{0, 4}` and `{3, 7}` and no such luck.
 
+## Simulating at scale: the stabilizer tableau
+
+Every circuit on this page is Clifford, and Clifford circuits on stabilizer
+states can be simulated in polynomial time (Gottesman–Knill). A
+[`Tableau`](@ref) stores `n` stabilizers and `n` destabilizers as packed bits —
+`O(n²)` memory instead of `2ⁿ` amplitudes — and brings **measurement**, which
+the unitary `Circuit` model leaves out. [`apply!`](@ref) runs any Clifford
+circuit on it:
+
+```@example qec
+t = Tableau(1000)
+apply!(t, H(), 1)
+for q in 2:1000; apply!(t, CNOT(), q - 1, q); end          # a 1000-qubit GHZ state
+outs = [measure!(t, q) for q in 1:1000]
+println("first outcome ", outs[1], "; all 1000 agree: ", all(==(outs[1]), outs))
+```
+
+With measurement, a logical state can be prepared the way hardware does it —
+measure every stabilizer, fix the `-1` outcomes — which works for any
+stabilizer code, including the five-qubit code that has no encoder here
+([`prepare_logical_zero`](@ref)). And syndromes can be *measured*: a
+distance-7 surface code with its syndrome ancillas is 97 qubits, far past the
+statevector, and [`sample_syndrome`](@ref) runs the real circuit:
+
+```@example qec
+code = rotated_surface_code(7)
+E = PauliOp("I"^10 * "X" * "I"^20 * "Z" * "I"^17)
+println(length(code) + length(stabilizers(code)), " qubits; measured syndrome = computed: ",
+        sample_syndrome(code, E) == syndrome(code, E))
+```
+
+Finally, [`logical_error_rate`](@ref) estimates how often decoding fails
+when every qubit suffers a random Pauli with probability `p` (code-capacity
+noise). Below about 1% a bigger code is better, the signature of a code
+working; the decoder here is a bounded-distance lookup table, so the
+crossover sits lower than a full matching decoder would put it:
+
+```@example qec
+for d in (3, 5)
+    local code = rotated_surface_code(d)
+    local table = lookup_decoder(code; maxweight = (d - 1) ÷ 2)
+    rates = [logical_error_rate(code, p; shots = 20_000, decoder = table)[1] for p in (0.003, 0.01, 0.03)]
+    println("d = ", d, ":  p = 0.003, 0.01, 0.03  →  ", round.(rates; sigdigits = 2))
+end
+```
+
 ## What is not here yet
 
-* **Measurement.** Circuits are unitary; syndromes are read off the final
-  state. A stabilizer (Clifford-tableau) simulator with measurement would
-  handle codes beyond about 20 qubits and sample logical error rates.
-* Encoders for non-CSS codes (such as the five-qubit code).
+* Circuit-level noise and repeated syndrome rounds, which need a decoder that
+  reads syndromes through time.
+* A minimum-weight matching decoder for surface codes.
+* Encoders for non-CSS codes as circuits (the tableau prepares them by
+  measurement).
 * `T`-count optimisation as Reed–Muller decoding of phase polynomials.

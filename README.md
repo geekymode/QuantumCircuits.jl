@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 4611 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 8381 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -273,6 +273,15 @@ sc = syndrome_circuit(code)            # one ancilla per stabilizer
 lookup_decoder(code)                   # syndrome → lowest-weight correction
 ```
 
+A Clifford-tableau simulator brings measurement and scale — a 97-qubit
+distance-7 surface code with its ancillas, or a 1000-qubit GHZ state:
+
+```julia
+t = prepare_logical_zero(five_qubit_code())   # by measuring stabilizers
+sample_syndrome(rotated_surface_code(7), E)   # runs the real circuit, measures ancillas
+logical_error_rate(rotated_surface_code(5), 0.005)
+```
+
 On the `[[15, 1, 3]]` code, `T` on every qubit is exactly a logical `T†`:
 `|0̄⟩` has codeword weights `≡ 0 (mod 8)` and `|1̄⟩` weights `≡ 7`. See the
 [Error correction](https://geekymode.github.io/QuantumCircuits.jl/dev/qec/) page.
@@ -339,6 +348,7 @@ true
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
 | Classical codes | `gf2_rref`, `gf2_rank`, `gf2_nullspace`, `LinearCode`, `hamming_code`, `reed_muller`, `encode`, `syndrome`, `syndrome_decode`, `rm_local_decode`, `minimum_distance`, `dual`, `puncture` |
 | Stabilizer codes | `PauliOp`, `StabilizerCode`, `css_code`, `steane_code`, `shor_code`, `five_qubit_code`, `quantum_reed_muller`, `rotated_surface_code`, `code_distance`, `logical_operators`, `lookup_decoder`, `encoding_circuit`, `syndrome_circuit` |
+| Stabilizer simulation | `Tableau`, `apply!`, `measure!`, `expectation`, `prepare_logical_zero`, `sample_syndrome`, `logical_error_rate` |
 | Two-qubit (KAK) | `kak`, `KAK`, `canonical_gate`, `two_qubit`, `two_qubit!` |
 | Shannon decomposition | `qsd`, `cosine_sine`, `CSD`, `csd_angles`, `qsd_cnot_count`, `rand_unitary` |
 | Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
@@ -370,7 +380,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-4611 tests. Decompositions are checked against reference matrices built straight
+8381 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend, so they
 run in the docs environment (set up as above). `Pkg.test` would sandbox the

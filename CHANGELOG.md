@@ -17,6 +17,16 @@
 - New docs page: *Error correction*, ending with transversal `T` on the
   `[[15, 1, 3]]` code.
 
+### Stabilizer simulation
+- `Tableau` — Aaronson–Gottesman Clifford simulation on packed bits, with
+  `apply!` (any Clifford gate or `Circuit`), `measure!` (qubit or any Pauli),
+  `expectation`, `stabilizers` and `statevector`. Circuits stay unitary;
+  measurement lives here.
+- `prepare_logical_zero` (any stabilizer code, by measuring stabilizers),
+  `sample_syndrome` (runs the syndrome circuit and measures), and
+  `logical_error_rate` (code-capacity Monte Carlo).
+- Stabilizer codes can record a known `distance`; the catalogue does.
+
 ### Two-qubit KAK decomposition
 - `kak(U)` — `U = e^{iφ}(A₁⊗A₂)·exp(i(a XX + b YY + c ZZ))·(B₁⊗B₂)`, angles
   reduced to `(-π/4, π/4]`; `KAK` result type and `canonical_gate(a, b, c)`.

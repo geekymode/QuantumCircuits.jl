@@ -78,3 +78,15 @@ _gf2_inrowspace(A::AbstractMatrix, v::AbstractVector) =
 # A * B mod 2 for Bool/Bit matrices.
 _gf2mul(A::AbstractMatrix, B::AbstractMatrix) = BitMatrix(isodd.(Int.(A) * Int.(B)))
 _gf2mul(A::AbstractMatrix, v::AbstractVector) = BitVector(isodd.(Int.(A) * Int.(v)))
+
+# One solution x of A x = b over GF(2), or nothing if there is none.
+function _gf2_solve(A::AbstractMatrix, b::AbstractVector)
+    m, n = size(A)
+    R, piv = gf2_rref(hcat(_gf2(A), _gf2(b)))
+    any(==(n + 1), piv) && return nothing
+    x = falses(n)
+    for (i, p) in enumerate(piv)
+        x[p] = R[i, n+1]
+    end
+    x
+end

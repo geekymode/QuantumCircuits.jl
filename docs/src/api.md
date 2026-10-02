@@ -150,6 +150,21 @@ encoding_circuit
 syndrome_circuit
 ```
 
+## Stabilizer simulation
+
+```@docs
+Tableau
+apply!(::Tableau, ::Gate, ::Integer...)
+measure!
+expectation
+stabilizers(::Tableau)
+statevector(::Tableau)
+pauli!(::Tableau, ::PauliOp, ::AbstractVector{<:Integer})
+prepare_logical_zero
+sample_syndrome
+logical_error_rate
+```
+
 ## Real symmetric embeddings
 
 ```@docs
