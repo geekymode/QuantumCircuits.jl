@@ -93,6 +93,15 @@ is_clean
 implementation_error
 ```
 
+## Real symmetric embeddings
+
+```@docs
+realify
+hermitian_dilation
+symmetric_embedding
+embedding_circuit
+```
+
 ## Fan-out, parity and AND
 
 ```@docs

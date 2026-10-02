@@ -37,6 +37,9 @@ export Circuit, Instruction, nqubits, matrix, statevector, zero_state,
 export add_ancillas!, ancillas, data_qubits, isometry, logical_matrix,
        leakage, is_clean, implementation_error
 
+# embeddings in real symmetric involutions
+export realify, hermitian_dilation, symmetric_embedding, embedding_circuit
+
 # fan-out and parity
 export fanout!, parity!, and!
 
@@ -81,6 +84,7 @@ include("matrixdecomp.jl")
 include("phasepoly.jl")
 include("applications.jl")
 include("shannon.jl")
+include("embeddings.jl")
 include("plots.jl")
 
 end # module

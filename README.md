@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 1741 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 1824 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -217,6 +217,17 @@ has a constant-depth circuit (given exponentially many ancillas). Fan-out and
 parity gates are stored as dense matrices, so they are capped at 11 wires;
 the `:tree` style has no cap.
 
+Every unitary embeds in a real, symmetric, traceless involution of four times
+the dimension (Nehoran–Yuen Lemma 2.1), so a synthesiser for that narrow class
+synthesises everything — two ancillas and three one-qubit gates on top:
+
+```julia
+S = symmetric_embedding(U)        # [0 R; Rᵀ 0], R = [Re U -Im U; Im U Re U]
+S == S' && S * S ≈ I              # true
+c = embedding_circuit(qsd(S))     # any circuit for S, wrapped
+implementation_error(c, U)        # ~1e-14, ancillas returned clean
+```
+
 ### Illustrations
 
 Plotting is a package extension — it loads when a Makie backend is present and
@@ -270,6 +281,7 @@ true
 | Circuits | `Circuit`, `push!`, `append!`, `matrix`, `statevector`, `zero_state`, `apply!`, `draw`, `count_cnots`, `count_gates`, `depth`, `layers` |
 | Ancillas | `add_ancillas!`, `ancillas`, `data_qubits`, `isometry`, `logical_matrix`, `leakage`, `is_clean`, `implementation_error` |
 | Fan-out, parity, AND | `fanout!`, `parity!`, `and!` |
+| Real symmetric embeddings | `realify`, `hermitian_dilation`, `symmetric_embedding`, `embedding_circuit` |
 | Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
@@ -304,7 +316,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-1741 tests. Decompositions are checked against reference matrices built straight
+1824 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend:
 
