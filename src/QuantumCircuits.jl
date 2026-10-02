@@ -33,8 +33,12 @@ export Gate, Id, X, Y, Z, H, S, Sdg, T, Tdg, RX, RY, RZ, PHASE,
 export Circuit, Instruction, nqubits, matrix, statevector, zero_state,
        apply!, draw, count_gates, count_cnots, depth, layers
 
+# ancillas
+export add_ancillas!, ancillas, data_qubits, isometry, logical_matrix,
+       leakage, is_clean, implementation_error
+
 # fan-out and parity
-export fanout!, parity!
+export fanout!, parity!, and!
 
 # decompositions
 export multiplex_angles, multiplex_matrix, multiplexed_rotation!,

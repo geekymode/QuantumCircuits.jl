@@ -116,3 +116,61 @@ function parity!(c::Circuit, sources::AbstractVector{<:Integer}, target::Integer
     end
     c
 end
+
+# --- AND with clean ancillas ------------------------------------------------
+
+"""
+    and!(c, inputs, target; ancillas, lower=false) -> c
+
+Append `C^k X`: XOR the AND of `inputs` into `target`, as a balanced tree of
+Toffolis through `k - 2` clean ancillas that are uncomputed afterwards.
+
+| | Toffolis | depth | ancillas |
+|:--|:--|:--|:--|
+| `and!` (`k ≥ 2`) | `2k - 3` | `2⌈log₂ k⌉ - 1` | `k - 2` |
+| [`multicontrolled`](@ref) | — | `~2ᵏ⁺¹` | `0` |
+
+`ancillas` defaults to `k - 2` fresh wires from [`add_ancillas!`](@ref); pass
+existing clean ones to reuse them — they are returned to `|0⟩`, which
+[`is_clean`](@ref) confirms.  `lower=true` writes each Toffoli through
+[`multicontrolled!`](@ref) — two CNOTs and three controlled-`√X` gates —
+instead of as one `CCX` gate.
+
+This is the ancilla-for-depth trade in miniature: the ancilla-free
+`multicontrolled` walks all `2ᵏ - 1` parities in sequence, while the tree
+spends wires to run the ANDs side by side.
+"""
+function and!(c::Circuit, inputs::AbstractVector{<:Integer}, target::Integer;
+              ancillas::Union{AbstractVector{<:Integer},Nothing}=nothing,
+              lower::Bool=false)
+    xs = collect(Int, inputs)
+    isempty(xs) && throw(ArgumentError("AND needs at least one input"))
+    allunique(vcat(xs, target)) || throw(ArgumentError("inputs and target must be distinct wires"))
+    need = max(length(xs) - 2, 0)
+    as = ancillas === nothing ? add_ancillas!(c, need) : collect(Int, ancillas)
+    allunique(vcat(xs, as, target)) ||
+        throw(ArgumentError("ancillas must be distinct from the inputs and target"))
+    length(as) >= need || throw(ArgumentError("$(length(xs)) inputs need $need ancillas, got $(length(as))"))
+
+    toffoli!(a, b, t) = lower ? multicontrolled!(c, matrix(X()), [a, b], t) :
+                                push!(c, controlled(X(), 2), a, b, t)
+    length(xs) == 1 && return push!(c, CNOT(), xs[1], target)
+
+    # compute: AND pairs level by level into fresh ancillas until two remain
+    steps = Tuple{Int,Int,Int}[]
+    level, free = xs, copy(as)
+    while length(level) > 2
+        next = Int[]
+        for i in 1:2:length(level)-1
+            t = popfirst!(free)
+            push!(steps, (level[i], level[i+1], t))
+            push!(next, t)
+        end
+        isodd(length(level)) && push!(next, level[end])
+        level = next
+    end
+    for s in steps; toffoli!(s...); end
+    toffoli!(level[1], level[2], target)
+    for s in reverse(steps); toffoli!(s...); end    # uncompute
+    c
+end

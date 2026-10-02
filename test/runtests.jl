@@ -29,6 +29,9 @@ function ref_multiplexed_gate(Us, controls, target, n)
     U
 end
 
+"""⌈log₂ r⌉, for checking tree depths."""
+clog2(r) = r <= 1 ? 0 : 64 - leading_zeros(r - 1)
+
 @testset "QuantumCircuits.jl" begin
     include("test_graycode.jl")
     include("test_gates.jl")
@@ -37,6 +40,7 @@ end
     include("test_mathkit.jl")
     include("test_matrixdecomp.jl")
     include("test_fanout.jl")
+    include("test_ancilla.jl")
     include("test_phasepoly.jl")
     include("test_applications.jl")
     include("test_shannon.jl")

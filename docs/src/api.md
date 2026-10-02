@@ -80,11 +80,25 @@ depth
 layers
 ```
 
-## Fan-out and parity
+## Ancillas
+
+```@docs
+add_ancillas!
+ancillas
+data_qubits
+isometry
+logical_matrix
+leakage
+is_clean
+implementation_error
+```
+
+## Fan-out, parity and AND
 
 ```@docs
 fanout!
 parity!
+and!
 ```
 
 ## Linear algebra

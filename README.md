@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 1673 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 1741 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -176,7 +176,7 @@ does not reduce CNOTs, because each term's basis-change gates block ladder
 cancellation. The win comes from pooling commuting terms, not reordering
 non-commuting ones — the docs show the measurement.
 
-### Depth and fan-out
+### Depth, fan-out and ancillas
 
 CNOT count is not the only cost: gates on disjoint wires run in parallel, and
 `depth` measures how long the circuit takes when they do. The same CNOTs,
@@ -197,6 +197,19 @@ fanout!(c, 1, 2:5; style=:gate)            # one FANOUT gate: depth 1
 | `style=:ladder` | 14 | 15 |
 | `style=:tree` | 14 | **7** |
 | `style=:gate` (unit-cost parity gates) | 0 | **3** |
+
+Ancillas trade width for depth. Circuits track which wires are ancillas, and
+check that they come back clean:
+
+```julia
+c = Circuit(9)                    # 8 controls + target
+and!(c, 1:8, 9)                   # C⁸X as a Toffoli tree, 6 ancillas added
+c                                 # Circuit(9 qubits + 6 ancillas, 13 gates, 0 CNOTs)
+depth(c)                          # 5 — the ancilla-free multicontrolled is 503
+is_clean(c)                       # true: every ancilla returned to |0⟩
+logical_matrix(c)                 # the 2⁹×2⁹ unitary seen from the data wires
+implementation_error(c, U)        # ‖C(I⊗|0⟩) − U⊗|0⟩‖
+```
 
 `style=:gate` is the *unbounded fan-out* model, in which
 [Nehoran and Yuen](https://arxiv.org/abs/2609.40351) show that every unitary
@@ -255,7 +268,8 @@ true
 | Gray code | `gray`, `ungray`, `graycode`, `gray_flip_position`, `gray_flip_positions`, `gray_adjacent`, `gray_walk`, `hamming`, `parity`, `bits` |
 | Gates | `Id`, `X`, `Y`, `Z`, `H`, `S`, `Sdg`, `T`, `Tdg`, `RX`, `RY`, `RZ`, `PHASE`, `CNOT`, `CZ`, `SWAP`, `FANOUT`, `PARITY`, `controlled` |
 | Circuits | `Circuit`, `push!`, `append!`, `matrix`, `statevector`, `zero_state`, `apply!`, `draw`, `count_cnots`, `count_gates`, `depth`, `layers` |
-| Fan-out and parity | `fanout!`, `parity!` |
+| Ancillas | `add_ancillas!`, `ancillas`, `data_qubits`, `isometry`, `logical_matrix`, `leakage`, `is_clean`, `implementation_error` |
+| Fan-out, parity, AND | `fanout!`, `parity!`, `and!` |
 | Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
@@ -290,7 +304,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-1673 tests. Decompositions are checked against reference matrices built straight
+1741 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend:
 

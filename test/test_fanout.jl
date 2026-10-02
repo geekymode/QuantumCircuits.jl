@@ -14,8 +14,6 @@ function ref_xor(n, srcs, dsts)
     U
 end
 
-clog2(r) = r <= 1 ? 0 : 64 - leading_zeros(r - 1)
-
 @testset "depth and fan-out" begin
     @testset "depth and layers" begin
         @test depth(Circuit(3)) == 0
