@@ -146,9 +146,36 @@ U = rand_unitary(2)
 That blow-up is the theorem's price, made visible: the circuit that realises
 this identity in constant depth has `Õ(N² log⁴(N/ε))` qubits.
 
+## The Fourier step as gates
+
+With `K = 2^k` grid points, the centred DFT is an ordinary inverse QFT
+between two diagonal phases (Eq. 47), and those phases are linear in the
+grid index — one phase gate per wire. [`centered_dft!`](@ref) builds it from
+[`qft!`](@ref), exactly:
+
+```@example parallel
+k = 4
+c = centered_dft!(Circuit(k), 1:k)
+println(length(c), " gates, depth ", depth(c),
+        ", error vs centered_dft: ", opnorm(matrix(c) - centered_dft(2^k)))
+```
+
+The textbook QFT has depth `2k`; making it constant needs the fan-out
+construction of Høyer and Špalek, which is the paper's Section 5.3. Most of
+its controlled phases are tiny, and `cutoff` drops them (the approximate
+QFT):
+
+```@example parallel
+F = matrix(qft(8))
+for m in (2, 4, 6, 8)
+    a = qft(8; cutoff = m)
+    println("cutoff ", m, ": ", count_gates(a, :CP), " controlled phases, error ",
+            round(opnorm(matrix(a) - F); sigdigits = 2))
+end
+```
+
 ## What is not here yet
 
-* The constant-depth circuits for each step: the encoding, the chirp as a
-  sum of `N²` pairwise products computed in parallel, and the constant-depth
-  QFT of Høyer and Špalek. Each is built from fan-out, parity and AND.
-* A QFT circuit, which `centered_dft` reduces to (Eq. 47).
+The constant-depth circuits for each step: the encoding, the chirp as a sum
+of `N²` pairwise products computed in parallel, and the constant-depth QFT of
+Høyer and Špalek. Each is built from fan-out, parity and AND.

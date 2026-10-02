@@ -102,6 +102,14 @@ symmetric_embedding
 embedding_circuit
 ```
 
+## Quantum Fourier transform
+
+```@docs
+qft
+qft!
+centered_dft!
+```
+
 ## Three-query synthesis
 
 ```@docs

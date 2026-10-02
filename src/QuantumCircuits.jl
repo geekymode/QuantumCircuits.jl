@@ -40,6 +40,9 @@ export add_ancillas!, ancillas, data_qubits, isometry, logical_matrix,
 # embeddings in real symmetric involutions
 export realify, hermitian_dilation, symmetric_embedding, embedding_circuit
 
+# quantum Fourier transform
+export qft, qft!, centered_dft!
+
 # three-query synthesis
 export three_query, three_query_error, three_query_synthesis, centered_dft,
        qho_encoding, chirp_phases
@@ -89,6 +92,7 @@ include("phasepoly.jl")
 include("applications.jl")
 include("shannon.jl")
 include("embeddings.jl")
+include("qft.jl")
 include("threequery.jl")
 include("plots.jl")
 
