@@ -48,5 +48,8 @@ clog2(r) = r <= 1 ? 0 : 64 - leading_zeros(r - 1)
     include("test_embeddings.jl")
     include("test_qft.jl")
     include("test_threequery.jl")
+    include("test_codes.jl")
+    include("test_stabilizer.jl")
+    include("test_qec_circuits.jl")
     include("test_plots.jl")
 end
