@@ -27,6 +27,15 @@
   `logical_error_rate` (code-capacity Monte Carlo).
 - Stabilizer codes can record a known `distance`; the catalogue does.
 
+### Detector error models
+- `detector_error_model` / `DetectorErrorModel` — every single fault of the
+  memory experiment traced by Pauli-frame propagation to its detectors and
+  logical effect, merged and weighted by `log((1-p)/p)`. Checked against
+  full tableau simulation at every fault location.
+- `memory_experiment(...; decoder = :dem)` (now the default) decodes on it;
+  the circuit-level crossover moves from ~0.3% to ~0.7%. `:uniform` keeps
+  the plain space-time graph.
+
 ### Noisy syndrome extraction
 - `NoiseModel`, `circuit_noise`, `phenomenological_noise`.
 - `memory_experiment` — repeated noisy rounds of the syndrome circuit on the

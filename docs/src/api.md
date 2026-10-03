@@ -171,6 +171,8 @@ NoiseModel
 circuit_noise
 phenomenological_noise
 memory_experiment
+DetectorErrorModel
+detector_error_model
 ```
 
 ## Real symmetric embeddings

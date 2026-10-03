@@ -55,5 +55,6 @@ clog2(r) = r <= 1 ? 0 : 64 - leading_zeros(r - 1)
     include("test_blossom.jl")
     include("test_matching.jl")
     include("test_memory.jl")
+    include("test_dem.jl")
     include("test_plots.jl")
 end

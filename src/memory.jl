@@ -209,7 +209,7 @@ function _decode_memory(g::_SpaceTimeGraph, det::BitMatrix)
 end
 
 """
-    memory_experiment(code, noise; rounds=code distance, shots=1000, rng) -> (rate, failures)
+    memory_experiment(code, noise; rounds=code distance, shots=1000, decoder=:dem, rng) -> (rate, failures)
 
 Estimate the logical error rate of storing `|0̄⟩` under circuit-level `noise`
 ([`NoiseModel`](@ref)), on the tableau simulator: start in `|0…0⟩`, run
@@ -219,29 +219,36 @@ qubit.  Detectors are the round-to-round changes of the `Z` checks, decoded by
 minimum-weight matching on the space-time graph; a shot fails when the decoded
 `Z̄` disagrees with `0`.
 
+`decoder` chooses the matching graph:
+
+* `:dem` (default) — the [`detector_error_model`](@ref) of this exact circuit
+  and noise: every fault traced to its detectors, edges weighted by
+  `log((1-p)/p)`, diagonal edges included;
+* `:uniform` — the plain space-time graph, one unit-weight edge per data or
+  measurement error.
+
 For CSS codes whose qubits lie in at most two `Z` checks (surface codes).
 
-Under [`phenomenological_noise`](@ref) this decoder is the standard one and
-the surface code's crossover sits near the known threshold.  Under
-[`circuit_noise`](@ref) it is deliberately simple, and the crossover (about
-0.3% here) sits below the 0.5–1% that tuned decoders reach, for three reasons:
-the graph lacks the diagonal edges that a gate fault mid-round creates, all
-edges weigh the same although data and measurement faults have different
-probabilities, and the checks are measured one after another rather than in
-parallel.  A detector error model — every single fault traced to its detector
-signature and probability — would remove the first two.
+Under [`phenomenological_noise`](@ref) both decoders are standard and the
+crossover sits near the known threshold.  Under [`circuit_noise`](@ref) the
+uniform graph misses the diagonal edges that gate faults create and weighs
+every edge alike; the detector error model fixes both.
 """
 function memory_experiment(code::StabilizerCode, noise::NoiseModel;
                            rounds::Integer=something(code.distance, 3),
-                           shots::Integer=1000, rng=Random.default_rng())
+                           shots::Integer=1000, decoder::Symbol=:dem,
+                           rng=Random.default_rng())
     is_css(code) || throw(ArgumentError("memory_experiment needs a CSS code"))
     dimension(code) == 1 || throw(ArgumentError("memory_experiment needs one logical qubit"))
     rounds >= 1 || throw(ArgumentError("need at least one round"))
+    decoder in (:dem, :uniform) || throw(ArgumentError("decoder must be :dem or :uniform"))
     g = _spacetime_graph(code, rounds)
+    dg = decoder === :dem ? _dem_graph(detector_error_model(code, noise; rounds=rounds)) : nothing
     failures = 0
     for _ in 1:shots
         det, logical = _sample_memory(code, noise, rounds, rng)
-        (_decode_memory(g, det) != logical) && (failures += 1)
+        guess = dg === nothing ? _decode_memory(g, det) : _decode_dem(dg, det, g.m)
+        guess != logical && (failures += 1)
     end
     failures / shots, failures
 end
