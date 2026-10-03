@@ -86,22 +86,29 @@ qsdfigure(3)
 ## The cost
 
 ```math
-\mathrm{CNOTs}(n) = 4\,\mathrm{CNOTs}(n-1) + 3\cdot 2^{n-1},
-\qquad \mathrm{CNOTs}(1) = 0
+\mathrm{CNOTs}(n) = 4\,\mathrm{CNOTs}(n-1) + 3\cdot 2^{n-1}
 ```
 
-which solves to `(3/4)·4ⁿ - (3/2)·2ⁿ`.
+The recursion stops at two qubits, where the KAK decomposition
+([`two_qubit!`](@ref)) writes any unitary with at most three CNOTs:
+`CNOTs(2) = 3`, which solves to `(9/16)·4ⁿ - (3/2)·2ⁿ`. Recursing one level
+further, down to one-qubit gates (`kak = false`, `CNOTs(1) = 0`), gives
+`(3/4)·4ⁿ - (3/2)·2ⁿ` — a third more:
 
 ```@example shannon
-[(n, count_cnots(qsd(rand_unitary(1 << n))), qsd_cnot_count(n)) for n in 1:4]
+[(n, count_cnots(qsd(rand_unitary(1 << n))), count_cnots(qsd(rand_unitary(1 << n); kak = false)))
+ for n in 2:5]
 ```
 
-Against the two-level route at `n = 3`: **36 CNOTs instead of 98**, and the gap
+Against the two-level route at `n = 3`: **24 CNOTs instead of 98**, and the gap
 widens with `n` because the two-level method carries an extra factor of `n`
 while this one does not.
 
+With `kak = false`, every CNOT comes out of a multiplexor:
+
 ```@example shannon
-circuitfigure(qsd(rand_unitary(4)); title = "QSD of a Haar-random two-qubit unitary")
+circuitfigure(qsd(rand_unitary(4); kak = false);
+              title = "QSD of a two-qubit unitary, recursing to one qubit")
 ```
 
 Every CNOT you see came out of a multiplexor, which is to say out of a Gray-code
@@ -112,13 +119,12 @@ two-level method was.
 
 ## Honest limits
 
-* This implementation runs a constant factor above the literature's
-  `(9/16)·4ⁿ`, which is reached by handling the two-qubit blocks with a KAK
-  (Cartan) decomposition — three CNOTs each — rather than recursing into them.
-  KAK is not implemented here; it is the single largest remaining win.
-  Further optimisations reach `(23/48)·4ⁿ`.
-* The decomposition is **structure-blind**. It spends the same 36 CNOTs on the
-  identity as on a Haar-random unitary:
+* The best known count is `(23/48)·4ⁿ`, below this implementation's
+  `(9/16)·4ⁿ`: it also absorbs the diagonal left by each demultiplexing step
+  into its neighbour. That is not implemented here.
+* The decomposition is **mostly structure-blind**. The multiplexors cost the
+  same whatever the input; only the KAK leaves notice structure, and spend
+  fewer CNOTs on simple blocks. The identity still costs the top level's 12:
 
 ```@example shannon
 count_cnots(qsd(Matrix{ComplexF64}(I, 8, 8))), count_cnots(qsd(rand_unitary(8)))

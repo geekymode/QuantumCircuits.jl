@@ -291,7 +291,7 @@ println(" middle factor IS a uniformly controlled RY: ",
         ok(matrix(multiplexed_ry(csd_angles(F), 2:3, 1; n = 3)) ≈
            [Diagonal(F.c) -Diagonal(F.s); Diagonal(F.s) Diagonal(F.c)]))
 
-println("\n n | QSD CNOTs | (3/4)4ⁿ-(3/2)2ⁿ | two-level route | exact | elementary")
+println("\n n | QSD CNOTs | (9/16)4ⁿ-(3/2)2ⁿ | two-level route | exact | elementary")
 for n in 1:4
     local V = randu(1 << n)
     local c = qsd(V)
@@ -307,7 +307,8 @@ println("   block-diagonal input → all sines exactly zero: ", ok(maximum(Fb.s)
 println("   factors still unitary:                         ",
         ok(all(is_unitary(M) for M in (Fb.L1, Fb.L2, Fb.R1, Fb.R2))))
 
-println("\n structure-blind, by design: identity costs the same as Haar-random —")
+println("\n mostly structure-blind: the multiplexors cost the same for any input;")
+println(" only the two-qubit KAK leaves get cheaper on simple blocks —")
 println("   identity(8): ", count_cnots(qsd(Matrix{ComplexF64}(I, 8, 8))), " CNOTs    ",
         "haar(8): ", count_cnots(qsd(randu(8))), " CNOTs")
 println("   use diagonal(), prepare_state() or multiplexed_1q() when you know more.")

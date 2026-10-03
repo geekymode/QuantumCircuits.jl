@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Two-qubit KAK decomposition
+- `kak(U)` — `U = e^{iφ}(A₁⊗A₂)·exp(i(a XX + b YY + c ZZ))·(B₁⊗B₂)`, angles
+  reduced to `(-π/4, π/4]`; `KAK` result type and `canonical_gate(a, b, c)`.
+- `two_qubit!` / `two_qubit` — any two-qubit unitary in the fewest CNOTs its
+  class allows: 0 (local), 1 (CNOT class), 2 (one canonical angle zero), 3.
+
+### Quantum Shannon decomposition
+- `qsd` stops at two-qubit KAK blocks: `(9/16)·4ⁿ - (3/2)·2ⁿ` CNOTs — 24 at
+  `n = 3` (was 36), 120 at `n = 4` (was 168). Structured inputs now come in
+  lower too (the identity on 3 qubits: 12). `kak=false` keeps the old
+  recursion; `qsd_cnot_count` and `qsdfigure` take the same keyword.
+
 ## v0.2.0 — 2026-10-02
 
 Depth, ancillas and parallel synthesis. Everything before this release

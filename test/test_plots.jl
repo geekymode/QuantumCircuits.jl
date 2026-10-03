@@ -27,6 +27,8 @@
         @test csdfigure(rand_unitary(16); theme=:dark) isa Makie.Figure
         @test qsdfigure(3) isa Makie.Figure
         @test qsdfigure(4; theme=:dark) isa Makie.Figure
+        @test qsdfigure(2) isa Makie.Figure
+        @test qsdfigure(3; kak=false) isa Makie.Figure
         @test circuitfigure(qsd(rand_unitary(4))) isa Makie.Figure
         @test_throws ArgumentError qsdfigure(1)
         @test costfigure(2:6) isa Makie.Figure

@@ -139,50 +139,55 @@ csd_angles(F::CSD) = [2 * atan(F.s[j], F.c[j]) for j in eachindex(F.c)]
 # --- quantum Shannon decomposition -----------------------------------------
 
 # append A ⊕ B (multiplexed by qubits[1]) using one demultiplexing step
-function _demux!(c::Circuit, A::AbstractMatrix, B::AbstractMatrix, qubits::Vector{Int})
+function _demux!(c::Circuit, A::AbstractMatrix, B::AbstractMatrix, qubits::Vector{Int}, kak::Bool)
     V, θ, W = demultiplex(A, B)
     rest = qubits[2:end]
-    qsd!(c, W, rest)                                     # right factor first
+    qsd!(c, W, rest; kak=kak)                            # right factor first
     multiplexed_rotation!(c, :RZ, θ, rest, qubits[1])    # D ⊕ D†  — Gray code
-    qsd!(c, V, rest)
+    qsd!(c, V, rest; kak=kak)
     c
 end
 
 """
-    qsd!(c, U, qubits) -> c
+    qsd!(c, U, qubits; kak=true) -> c
 
 Append an arbitrary unitary on `qubits`, by the quantum Shannon decomposition.
 
 One level peels the top wire with a [`cosine_sine`](@ref) split and two
 [`demultiplex`](@ref) steps, emitting three Gray-code multiplexors — one `RY`
 from the cosine–sine middle, one `RZ` from each side — and recursing on four
-`(n-1)`-qubit unitaries. The recursion bottoms out at [`decompose_1q!`](@ref).
+`(n-1)`-qubit unitaries.
 
-    CNOTs(n) = 4·CNOTs(n-1) + 3·2^(n-1),  CNOTs(1) = 0
-             = (3/4)·4ⁿ - (3/2)·2ⁿ
+The recursion bottoms out at two qubits, where [`two_qubit!`](@ref) needs at
+most three CNOTs (the KAK decomposition):
 
-which is 36 CNOTs at `n = 3` and 168 at `n = 4`, against roughly `O(n·4ⁿ)` for
-the two-level route of [`synthesize_unitary`](@ref) — 98 CNOTs at `n = 3` and
-far worse beyond. The literature's `(9/16)·4ⁿ` needs the two-qubit blocks
-handled by a KAK decomposition instead of recursing; that is not implemented
-here, so this runs a constant factor above the best known.
+    CNOTs(n) = 4·CNOTs(n-1) + 3·2^(n-1),  CNOTs(2) = 3
+             = (9/16)·4ⁿ - (3/2)·2ⁿ
+
+which is 24 CNOTs at `n = 3` and 120 at `n = 4`. With `kak=false` it recurses
+down to one qubit instead, `CNOTs(1) = 0`, for `(3/4)·4ⁿ - (3/2)·2ⁿ`: 36 and
+168. Either way it is far below the two-level route of
+[`synthesize_unitary`](@ref) — 98 CNOTs at `n = 3`. The best known,
+`(23/48)·4ⁿ`, also absorbs a diagonal from each demultiplexing step into its
+neighbour; that is not implemented here.
 """
-function qsd!(c::Circuit, U::AbstractMatrix, qubits::AbstractVector{<:Integer})
+function qsd!(c::Circuit, U::AbstractMatrix, qubits::AbstractVector{<:Integer}; kak::Bool=true)
     qs = collect(Int, qubits)
     n = length(qs)
     N = size(U, 1)
     N == 1 << n || throw(ArgumentError("matrix of size $N does not match $n qubits"))
     n == 1 && return decompose_1q!(c, U, qs[1])
+    n == 2 && kak && return two_qubit!(c, U, qs)
 
     F = cosine_sine(U)
-    _demux!(c, Matrix(F.R1'), Matrix(F.R2'), qs)                  # (R1 ⊕ R2)†
+    _demux!(c, Matrix(F.R1'), Matrix(F.R2'), qs, kak)             # (R1 ⊕ R2)†
     multiplexed_rotation!(c, :RY, csd_angles(F), qs[2:end], qs[1]) # CS — Gray code
-    _demux!(c, F.L1, F.L2, qs)                                    # L1 ⊕ L2
+    _demux!(c, F.L1, F.L2, qs, kak)                               # L1 ⊕ L2
     c
 end
 
 """
-    qsd(U) -> Circuit
+    qsd(U; kak=true) -> Circuit
 
 Quantum Shannon decomposition of an arbitrary `2ⁿ × 2ⁿ` unitary into CNOTs and
 one-qubit gates. See [`qsd!`](@ref).
@@ -191,22 +196,28 @@ one-qubit gates. See [`qsd!`](@ref).
 U = rand_unitary(8)
 c = qsd(U)
 matrix(c) ≈ U          # exact, global phase included
-count_cnots(c)         # 36
+count_cnots(c)         # 24 (36 with kak=false)
 ```
 """
-function qsd(U::AbstractMatrix)
+function qsd(U::AbstractMatrix; kak::Bool=true)
     N = size(U, 1)
     ispow2(N) || throw(ArgumentError("need a 2ⁿ × 2ⁿ matrix"))
-    qsd!(Circuit(trailing_zeros(N)), U, 1:trailing_zeros(N))
+    qsd!(Circuit(trailing_zeros(N)), U, 1:trailing_zeros(N); kak=kak)
 end
 
 """
-    qsd_cnot_count(n) -> Int
+    qsd_cnot_count(n; kak=true) -> Int
 
-The CNOT count this implementation's recursion produces for `n` qubits,
-`(3/4)·4ⁿ - (3/2)·2ⁿ`. Useful for checking a synthesised circuit.
+The CNOT count this implementation's recursion produces for a generic
+`n`-qubit unitary: `(9/16)·4ⁿ - (3/2)·2ⁿ` for `n ≥ 2` (3 at `n = 2`), or
+`(3/4)·4ⁿ - (3/2)·2ⁿ` with `kak=false`. Structured inputs can come in lower,
+since [`two_qubit!`](@ref) uses fewer CNOTs where it can.
 """
-qsd_cnot_count(n::Integer) = n <= 0 ? 0 : (3 * (1 << (2n)) ÷ 4) - 3 * (1 << n) ÷ 2
+function qsd_cnot_count(n::Integer; kak::Bool=true)
+    n <= 1 && return 0
+    kak || return (3 * (1 << (2n)) ÷ 4) - 3 * (1 << n) ÷ 2
+    (9 * (1 << (2n)) ÷ 16) - 3 * (1 << n) ÷ 2
+end
 
 """
     rand_unitary(N; rng=Random.default_rng()) -> Matrix{ComplexF64}

@@ -56,14 +56,18 @@
     end
 
     @testset "quantum Shannon decomposition" begin
-        for n in 1:4, _ in 1:2
+        for n in 1:4, _ in 1:2, kak in (true, false)
             U = rand_unitary(1 << n)
-            c = qsd(U)
+            c = qsd(U; kak=kak)
             @test matrix(c) ≈ U                                  # exact, phase included
-            @test count_cnots(c) == qsd_cnot_count(n)            # (3/4)4ⁿ - (3/2)2ⁿ
+            @test count_cnots(c) == qsd_cnot_count(n; kak=kak)
             @test all(length(op.qubits) <= 2 for op in c.ops)    # nothing but 1q + CNOT
         end
-        @test qsd_cnot_count.(1:5) == [0, 6, 36, 168, 720]
+        @test qsd_cnot_count.(1:5) == [0, 3, 24, 120, 528]       # (9/16)4ⁿ - (3/2)2ⁿ
+        @test qsd_cnot_count.(1:5; kak=false) == [0, 6, 36, 168, 720]   # (3/4)4ⁿ - (3/2)2ⁿ
+        # KAK leaves are never worse, and save a third or more from n = 3
+        U = rand_unitary(16)
+        @test count_cnots(qsd(U)) < count_cnots(qsd(U; kak=false))
 
         for U in (Matrix{ComplexF64}(I, 8, 8), matrix(controlled(X(), 2)),
                   kron(matrix(CNOT()), Matrix{ComplexF64}(I, 2, 2)),
@@ -71,6 +75,7 @@
                   kron_n(matrix(H()), 3), Matrix(Diagonal(cis.(randn(8)))),
                   [cis(2π * i * j / 8) / sqrt(8) for i in 0:7, j in 0:7])
             @test matrix(qsd(U)) ≈ U
+            @test count_cnots(qsd(U)) <= qsd_cnot_count(3)      # structure only helps
         end
 
         # beats the two-level route by a wide margin at n = 3

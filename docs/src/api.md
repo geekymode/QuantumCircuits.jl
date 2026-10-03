@@ -93,6 +93,16 @@ is_clean
 implementation_error
 ```
 
+## Two-qubit (KAK) decomposition
+
+```@docs
+KAK
+kak
+canonical_gate
+two_qubit
+two_qubit!
+```
+
 ## Real symmetric embeddings
 
 ```@docs

@@ -398,8 +398,9 @@ end
 
 _sup(k::Integer) = join(('⁰','¹','²','³','⁴','⁵','⁶','⁷','⁸','⁹')[d+1] for d in digits(k) |> reverse)
 
-function QuantumCircuits.qsdfigure(n::Integer=3; theme::Symbol=:light, scale::Real=1)
+function QuantumCircuits.qsdfigure(n::Integer=3; kak::Bool=true, theme::Symbol=:light, scale::Real=1)
     n >= 2 || throw(ArgumentError("qsdfigure needs at least 2 qubits"))
+    leaf = kak ? 2 : 1                          # level at which the recursion stops
     p = _palette(theme)
     surf = parse(Makie.Colorant, p.surface)
     ink = parse(Makie.Colorant, p.ink)
@@ -408,10 +409,11 @@ function QuantumCircuits.qsdfigure(n::Integer=3; theme::Symbol=:light, scale::Re
     accent2 = parse(Makie.Colorant, p.accent2)
     fillc = parse(Makie.Colorant, p.fill)
 
-    nrows = n                                   # levels n, n-1, … , 1
+    nrows = n - leaf + 1                        # levels n, n-1, … , leaf
     fig = Figure(size=(scale * 1000, scale * (120 + 96nrows)), backgroundcolor=surf)
     ax = Axis(fig[1, 1]; backgroundcolor=surf, yreversed=true,
-              title="quantum Shannon decomposition: every two-qubit gate comes from a Gray-code multiplexor",
+              title=kak ? "quantum Shannon decomposition: Gray-code multiplexors down to two-qubit KAK blocks" :
+                          "quantum Shannon decomposition: every two-qubit gate comes from a Gray-code multiplexor",
               titlealign=:left, titlecolor=muted, titlesize=14)
     hidedecorations!(ax); hidespines!(ax)
 
@@ -424,12 +426,21 @@ function QuantumCircuits.qsdfigure(n::Integer=3; theme::Symbol=:light, scale::Re
     scalex = W / total
 
     y = 1.0
-    for lvl in n:-1:1
+    for lvl in n:-1:leaf
         k = lvl - 1                             # controls in this level's multiplexors
-        if lvl == 1
+        if lvl == leaf
             poly!(ax, Rect2f(0, y - 0.3, W, 0.6); color=fillc, strokecolor=muted, strokewidth=1)
-            text!(ax, Point2f(W/2, y); text="one-qubit gates — ZYZ Euler angles, 0 CNOTs",
+            text!(ax, Point2f(W/2, y);
+                  text=kak ? "two-qubit blocks — KAK decomposition, at most 3 CNOTs each" :
+                             "one-qubit gates — ZYZ Euler angles, 0 CNOTs",
                   align=(:center, :center), fontsize=12, color=ink)
+            if kak
+                copies = 4^(n - 2)
+                text!(ax, Point2f(W + 2, y); text="× $copies  →  $(3copies) CNOTs",
+                      align=(:left, :center), fontsize=11, color=muted)
+            end
+            text!(ax, Point2f(-2, y); text="level $lvl", align=(:right, :center),
+                  fontsize=11, color=muted)
         else
             x = 0.0
             mi = 0
@@ -466,12 +477,11 @@ function QuantumCircuits.qsdfigure(n::Integer=3; theme::Symbol=:light, scale::Re
         end
         y += 1.0
     end
-    text!(ax, Point2f(-2, n + 0.0); text="level 1", align=(:right, :center),
-          fontsize=11, color=muted)
-    text!(ax, Point2f(0, n + 0.75);
-          text="total  (3/4)·4ⁿ − (3/2)·2ⁿ  =  $(QuantumCircuits.qsd_cnot_count(n)) CNOTs for n = $n",
+    formula = kak ? "(9/16)·4ⁿ − (3/2)·2ⁿ" : "(3/4)·4ⁿ − (3/2)·2ⁿ"
+    text!(ax, Point2f(0, nrows + 0.75);
+          text="total  $formula  =  $(QuantumCircuits.qsd_cnot_count(n; kak=kak)) CNOTs for n = $n",
           align=(:left, :center), fontsize=13, color=ink)
-    limits!(ax, -18, W + 32, n + 1.2, 0.3)
+    limits!(ax, -18, W + 32, nrows + 1.2, 0.3)
     fig
 end
 
