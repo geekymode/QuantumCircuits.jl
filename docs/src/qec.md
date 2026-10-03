@@ -202,10 +202,10 @@ the `Z` checks, and its syndrome is the set of nodes where error chains end.
 The most likely error under independent noise is the shortest set of chains
 explaining the syndrome: pair up the flipped checks, or send them to the
 boundary, at minimum total length. [`matching_decoder`](@ref) precomputes all
-shortest paths, and [`decode`](@ref) finds that matching **exactly**, by
-dynamic programming over subsets of the flipped checks — `O(2ᵐ m)` for `m`
-defects, which covers the codes and noise rates here (past `maxdefects` it
-falls back to greedy pairing). `Z` errors decode the same way on the `X`
+shortest paths, and [`decode`](@ref) finds that matching **exactly** — by
+dynamic programming over subsets of the flipped checks when there are few,
+and by Edmonds' blossom algorithm
+([`min_weight_perfect_matching`](@ref), `O(m³)`) when there are many. `Z` errors decode the same way on the `X`
 checks. Whatever the error, the correction it returns explains the syndrome
 exactly:
 
@@ -241,10 +241,55 @@ end
 (`p = 0.01, 0.03, 0.06, 0.1`.) Matching is not optimal: it treats a `Y`
 error as an unrelated `X` and `Z`, and correlated decoding does better.
 
+## Noisy syndrome extraction: the memory experiment
+
+So far the syndrome was read perfectly. On hardware the syndrome circuit
+itself is noisy — gates fail and measurements lie — so a single round cannot
+be trusted. Instead the syndrome is measured round after round, and the
+decoder watches **detectors**: the change in a check's value from one round to
+the next. A data error flips the checks it touches from some round on, which
+fires one detector per check in that round; a measurement error flips a single
+outcome, which fires the same check's detector in two consecutive rounds.
+Decoding becomes matching on a **space-time graph** — space edges for data
+errors, time edges for measurement errors — with the blossom algorithm
+([`min_weight_perfect_matching`](@ref)) doing the matching.
+
+[`memory_experiment`](@ref) runs the whole thing on the tableau: start in
+`|0…0⟩`, run `d` rounds of the syndrome circuit with a fault after every gate
+([`NoiseModel`](@ref)), measure and reset the ancillas, measure the data, and
+ask whether the decoded `Z̄` is still `0`.
+
+```@example qec
+for d in (3, 5)
+    local code = rotated_surface_code(d)
+    rates = [memory_experiment(code, phenomenological_noise(p); rounds = d, shots = 2000)[1]
+             for p in (0.01, 0.02, 0.03)]
+    println("phenomenological, d = ", d, ":  p = 0.01, 0.02, 0.03  →  ", round.(rates; sigdigits = 2))
+end
+```
+
+Under *phenomenological* noise — data qubits depolarize and measurements
+flip, gates are perfect ([`phenomenological_noise`](@ref)) — bigger codes win
+up to about 3%, close to the known matching threshold (2.9% per error type;
+a `Z` memory only has to correct the `X` part, two thirds of depolarizing
+noise). Under full *circuit-level* noise ([`circuit_noise`](@ref)) the
+crossover measured here is about 0.3% — below the 0.5–1% that tuned
+decoders reach, for reasons this simple decoder makes visible:
+
+* a two-qubit gate fault in the middle of a round fires detectors that no
+  single space or time edge explains — the graph lacks those *diagonal* edges;
+* every edge weighs the same, though data and measurement faults now have
+  different probabilities;
+* the checks are measured one after another, not in parallel, so faults pile up.
+
+A **detector error model** — every single fault traced through the circuit to
+its detector signature and probability, then matched on that weighted graph —
+fixes the first two, and is the natural next step.
+
 ## What is not here yet
 
-* Circuit-level noise and repeated syndrome rounds, where the matching graph
-  gains a time direction.
+* A detector error model, and decoding on it.
+* Parallel scheduling of the syndrome circuit.
 * Encoders for non-CSS codes as circuits (the tableau prepares them by
   measurement).
 * `T`-count optimisation as Reed–Muller decoding of phase polynomials.

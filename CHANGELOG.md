@@ -27,10 +27,22 @@
   `logical_error_rate` (code-capacity Monte Carlo).
 - Stabilizer codes can record a known `distance`; the catalogue does.
 
+### Noisy syndrome extraction
+- `NoiseModel`, `circuit_noise`, `phenomenological_noise`.
+- `memory_experiment` — repeated noisy rounds of the syndrome circuit on the
+  tableau, detectors as round-to-round changes, decoded by matching on the
+  space-time graph. Phenomenological crossover near 3% (matching the known
+  threshold); circuit-level about 0.3%, below tuned decoders, for documented
+  reasons (no diagonal edges, uniform weights, sequential checks).
+- `min_weight_perfect_matching` — Edmonds' blossom algorithm, `O(n³)`,
+  checked against brute force; the matching decoder now uses it past a few
+  defects instead of a greedy fallback, so decoding is always exact.
+
 ### Matching decoder
 - `matching_decoder` / `decode` — minimum-weight matching for surface-code-like
-  CSS codes, exact by dynamic programming over defect subsets (greedy past
-  `maxdefects`). The correction always explains the syndrome; every error of
+  CSS codes, always exact: dynamic programming over defect subsets for a few
+  defects, Edmonds' blossom algorithm (`min_weight_perfect_matching`,
+  `O(n³)`) beyond. The correction always explains the syndrome; every error of
   weight `≤ ⌊(d-1)/2⌋` is corrected. Code-capacity crossover near 15%, against
   below 1% for the lookup table. `logical_error_rate` accepts either decoder.
 

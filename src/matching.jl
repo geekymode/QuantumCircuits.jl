@@ -12,10 +12,11 @@
 # X and Z errors decode separately: Z checks find X errors, X checks find Z
 # errors.  A Y error is one of each.
 #
-# The matching is exact, by dynamic programming over subsets of defects:
-# dp[S] = min( dp[S - i] + d(i, boundary),  min_j dp[S - i - j] + d(i, j) )
-# for i the lowest defect in S.  That is O(2ᵐ m) for m defects, so beyond
-# `maxdefects` the decoder falls back to greedy pairing and says so.
+# The matching is always exact.  For a few defects, dynamic programming over
+# subsets: dp[S] = min( dp[S - i] + d(i, boundary), min_j dp[S - i - j] + d(i, j) )
+# for i the lowest defect in S, O(2ᵐ m).  Beyond `maxdefects`, Edmonds' blossom
+# algorithm on defects plus one boundary copy each (copies joined at weight 0),
+# O(m³).
 # ---------------------------------------------------------------------------
 
 # One matching graph: checks 1…m, boundary node m+1, and per node a BFS tree
@@ -93,17 +94,18 @@ struct MatchingDecoder
 end
 
 """
-    matching_decoder(code; maxdefects=20) -> MatchingDecoder
+    matching_decoder(code; maxdefects=12) -> MatchingDecoder
 
 Build the two matching graphs of a CSS code — `Z` checks locate `X` errors,
 `X` checks locate `Z` errors — with all shortest paths precomputed.
 Throws for codes where a qubit lies in three or more checks of one type
 (such as the Steane code), which are not graph-like.
 
-Matching is exact for up to `maxdefects` flipped checks of a type; beyond
-that it falls back to greedy pairing (see [`decode`](@ref)).
+Matching is always exact: dynamic programming over subsets for up to
+`maxdefects` flipped checks of a type, Edmonds' blossom algorithm
+([`min_weight_perfect_matching`](@ref)) beyond.
 """
-function matching_decoder(code::StabilizerCode; maxdefects::Integer=20)
+function matching_decoder(code::StabilizerCode; maxdefects::Integer=12)
     is_css(code) || throw(ArgumentError("matching decoding needs a CSS code"))
     zidx = [i for (i, s) in enumerate(code.stabilizers) if any(s.z)]
     xidx = [i for (i, s) in enumerate(code.stabilizers) if any(s.x)]
@@ -153,23 +155,27 @@ function _min_matching(g::_MatchGraph, defects::Vector{Int})
     pairs, dp[full+1]
 end
 
-# Greedy fallback: repeatedly take the cheapest remaining pair or boundary hop.
-function _greedy_matching(g::_MatchGraph, defects::Vector{Int})
+# The same matching by the blossom algorithm: defect i is vertex i, its
+# boundary copy vertex m + i; copies pair with each other at weight 0.
+function _blossom_matching(g::_MatchGraph, defects::Vector{Int})
+    m = length(defects)
     B = size(g.dist, 1)
-    left = copy(defects)
-    pairs = Tuple{Int,Int}[]
-    while !isempty(left)
-        best, bi, bj = typemax(Int), 0, 0
-        for (a, u) in enumerate(left)
-            g.dist[u, B] < best && ((best, bi, bj) = (g.dist[u, B], a, 0))
-            for b in a+1:length(left)
-                g.dist[u, left[b]] < best && ((best, bi, bj) = (g.dist[u, left[b]], a, b))
-            end
+    edges = Tuple{Int,Int,Int}[]
+    for a in 1:m
+        push!(edges, (a, m + a, g.dist[defects[a], B]))
+        for b in a+1:m
+            push!(edges, (a, b, g.dist[defects[a], defects[b]]))
+            push!(edges, (m + a, m + b, 0))
         end
-        if bj == 0
-            push!(pairs, (left[bi], B)); deleteat!(left, bi)
-        else
-            push!(pairs, (left[bi], left[bj])); deleteat!(left, sort([bi, bj]))
+    end
+    mate = min_weight_perfect_matching(2m, edges)
+    pairs = Tuple{Int,Int}[]
+    for a in 1:m
+        b = mate[a]
+        if b > m
+            push!(pairs, (defects[a], B))
+        elseif a < b
+            push!(pairs, (defects[a], defects[b]))
         end
     end
     pairs
@@ -178,13 +184,12 @@ end
 function _decode_graph(g::_MatchGraph, s::AbstractVector, maxdefects::Int)
     defects = [node for (node, i) in enumerate(g.checks) if s[i]]
     flip = Set{Int}()
-    isempty(defects) && return flip, true
-    exact = length(defects) <= maxdefects
-    pairs = exact ? _min_matching(g, defects)[1] : _greedy_matching(g, defects)
+    isempty(defects) && return flip
+    pairs = length(defects) <= maxdefects ? _min_matching(g, defects)[1] : _blossom_matching(g, defects)
     for (a, b) in pairs, q in _path_qubits(g, a, b)
         q in flip ? delete!(flip, q) : push!(flip, q)
     end
-    flip, exact
+    flip
 end
 
 """
@@ -197,8 +202,8 @@ checks; its syndrome always equals `s`.  For a lookup table
 not in it.
 """
 function decode(d::MatchingDecoder, s::AbstractVector)
-    fx, _ = _decode_graph(d.gx, s, d.maxdefects)
-    fz, _ = _decode_graph(d.gz, s, d.maxdefects)
+    fx = _decode_graph(d.gx, s, d.maxdefects)
+    fz = _decode_graph(d.gz, s, d.maxdefects)
     PauliOp(BitVector(q in fx for q in 1:d.n), BitVector(q in fz for q in 1:d.n))
 end
 
