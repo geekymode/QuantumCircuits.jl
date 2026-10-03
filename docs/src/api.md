@@ -163,6 +163,9 @@ pauli!(::Tableau, ::PauliOp, ::AbstractVector{<:Integer})
 prepare_logical_zero
 sample_syndrome
 logical_error_rate
+MatchingDecoder
+matching_decoder
+decode
 ```
 
 ## Real symmetric embeddings

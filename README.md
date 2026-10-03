@@ -6,14 +6,23 @@
 
 **Documentation: <https://geekymode.github.io/QuantumCircuits.jl/>**
 
-A dependency-free Julia package for building quantum circuits, decomposing
-structured unitaries into elementary gates, and drawing the result.
+A dependency-free Julia package for building quantum circuits, compiling
+unitaries into elementary gates, and protecting them with error-correcting
+codes — every result checked exactly against a simulator.
 
-The theme of this first release is **Gray coding**: order the computational
-basis so consecutive states differ in exactly one bit, and the CNOT ladders in
-a decomposition collapse to a single CNOT per step. See
-[`docs/graycode.md`](docs/graycode.md) for the derivation and the reason it
-matters.
+It started from **Gray coding**: order the computational basis so consecutive
+states differ in exactly one bit, and the CNOT ladders in a decomposition
+collapse to a single CNOT per step (derivation in
+[`docs/graycode.md`](docs/graycode.md)). Around that it now covers:
+
+* **Synthesis** — multiplexors, diagonals, state preparation, and arbitrary
+  unitaries by Shannon decomposition down to two-qubit KAK blocks,
+  `(9/16)·4ⁿ` CNOTs.
+* **Depth and width** — circuit depth, fan-out, ancilla-aware circuits, the
+  QFT, and Nehoran–Yuen's three-query synthesis of every unitary.
+* **Error correction** — GF(2) and Reed–Muller codes, stabilizer codes with
+  encoding and syndrome circuits, transversal `T`, a Clifford-tableau
+  simulator, and matching decoders.
 
 ## Getting started
 
@@ -24,7 +33,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 8381 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 11727 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -279,7 +288,7 @@ distance-7 surface code with its ancillas, or a 1000-qubit GHZ state:
 ```julia
 t = prepare_logical_zero(five_qubit_code())   # by measuring stabilizers
 sample_syndrome(rotated_surface_code(7), E)   # runs the real circuit, measures ancillas
-logical_error_rate(rotated_surface_code(5), 0.005)
+logical_error_rate(code, 0.05; decoder = matching_decoder(code))  # minimum-weight matching
 ```
 
 On the `[[15, 1, 3]]` code, `T` on every qubit is exactly a logical `T†`:
@@ -348,7 +357,7 @@ true
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
 | Classical codes | `gf2_rref`, `gf2_rank`, `gf2_nullspace`, `LinearCode`, `hamming_code`, `reed_muller`, `encode`, `syndrome`, `syndrome_decode`, `rm_local_decode`, `minimum_distance`, `dual`, `puncture` |
 | Stabilizer codes | `PauliOp`, `StabilizerCode`, `css_code`, `steane_code`, `shor_code`, `five_qubit_code`, `quantum_reed_muller`, `rotated_surface_code`, `code_distance`, `logical_operators`, `lookup_decoder`, `encoding_circuit`, `syndrome_circuit` |
-| Stabilizer simulation | `Tableau`, `apply!`, `measure!`, `expectation`, `prepare_logical_zero`, `sample_syndrome`, `logical_error_rate` |
+| Stabilizer simulation | `Tableau`, `apply!`, `measure!`, `expectation`, `prepare_logical_zero`, `sample_syndrome`, `logical_error_rate`, `matching_decoder`, `decode` |
 | Two-qubit (KAK) | `kak`, `KAK`, `canonical_gate`, `two_qubit`, `two_qubit!` |
 | Shannon decomposition | `qsd`, `cosine_sine`, `CSD`, `csd_angles`, `qsd_cnot_count`, `rand_unitary` |
 | Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
@@ -380,7 +389,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-8381 tests. Decompositions are checked against reference matrices built straight
+11727 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend, so they
 run in the docs environment (set up as above). `Pkg.test` would sandbox the

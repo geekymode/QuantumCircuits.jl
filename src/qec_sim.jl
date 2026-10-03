@@ -81,6 +81,9 @@ end
     logical_error_rate(code, p; shots=10_000, decoder=lookup_decoder(code; maxweight), maxweight, rng)
         -> (rate, failures)
 
+`decoder` is anything [`decode`](@ref) accepts: a lookup table, or a
+[`MatchingDecoder`](@ref) for surface codes.
+
 Monte Carlo estimate of the logical error rate under *code-capacity* noise:
 each qubit independently suffers `X`, `Y` or `Z` with probability `p/3`
 each; the syndrome is read perfectly, the lookup `decoder` proposes a
@@ -103,7 +106,7 @@ function logical_error_rate(code::StabilizerCode, p::Real; shots::Integer=10_000
     failures = 0
     for _ in 1:shots
         E = _depolarizing(n, p, rng)
-        C = get(decoder, syndrome(code, E), nothing)
+        C = decode(decoder, syndrome(code, E))
         if C === nothing
             failures += 1
             continue

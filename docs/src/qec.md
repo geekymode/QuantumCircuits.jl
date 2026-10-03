@@ -190,26 +190,61 @@ println(length(code) + length(stabilizers(code)), " qubits; measured syndrome = 
         sample_syndrome(code, E) == syndrome(code, E))
 ```
 
-Finally, [`logical_error_rate`](@ref) estimates how often decoding fails
-when every qubit suffers a random Pauli with probability `p` (code-capacity
-noise). Below about 1% a bigger code is better, the signature of a code
-working; the decoder here is a bounded-distance lookup table, so the
-crossover sits lower than a full matching decoder would put it:
+## Decoding by matching
+
+A lookup table only knows errors up to weight `⌊(d-1)/2⌋`; anything heavier
+is a guaranteed failure, so it wastes most of what a large code offers. The
+surface code has more structure to use. Every qubit lies in at most two checks
+of each type, so an `X` error is a set of *edges* in a graph whose nodes are
+the `Z` checks, and its syndrome is the set of nodes where error chains end.
+(A qubit in only one check gets an edge to a virtual boundary node.)
+
+The most likely error under independent noise is the shortest set of chains
+explaining the syndrome: pair up the flipped checks, or send them to the
+boundary, at minimum total length. [`matching_decoder`](@ref) precomputes all
+shortest paths, and [`decode`](@ref) finds that matching **exactly**, by
+dynamic programming over subsets of the flipped checks — `O(2ᵐ m)` for `m`
+defects, which covers the codes and noise rates here (past `maxdefects` it
+falls back to greedy pairing). `Z` errors decode the same way on the `X`
+checks. Whatever the error, the correction it returns explains the syndrome
+exactly:
 
 ```@example qec
-for d in (3, 5)
+code = rotated_surface_code(7)
+dec = matching_decoder(code)
+E = PauliOp(rand(49) .< 0.1, rand(49) .< 0.1)                # a heavy random error
+println("error weight ", weight(E), ";  correction explains the syndrome: ",
+        syndrome(code, decode(dec, syndrome(code, E))) == syndrome(code, E))
+```
+
+## Logical error rates
+
+[`logical_error_rate`](@ref) estimates how often decoding fails when every
+qubit independently suffers `X`, `Y` or `Z` with probability `p/3` each
+(code-capacity noise). A code is *working* when making it bigger makes it
+better. With the lookup table that only holds below about 1%; with matching
+it holds up to about 15%, matching the known threshold for decoding `X` and
+`Z` independently (10.3% per type, which is about 15% depolarizing):
+
+```@example qec
+ps = (0.01, 0.03, 0.06, 0.1)
+for d in (3, 5, 7)
     local code = rotated_surface_code(d)
-    local table = lookup_decoder(code; maxweight = (d - 1) ÷ 2)
-    rates = [logical_error_rate(code, p; shots = 20_000, decoder = table)[1] for p in (0.003, 0.01, 0.03)]
-    println("d = ", d, ":  p = 0.003, 0.01, 0.03  →  ", round.(rates; sigdigits = 2))
+    local dec = matching_decoder(code)
+    local tab = lookup_decoder(code; maxweight = (d - 1) ÷ 2)
+    m = [logical_error_rate(code, p; shots = 10_000, decoder = dec)[1] for p in ps]
+    l = [logical_error_rate(code, p; shots = 10_000, decoder = tab)[1] for p in ps]
+    println("d = ", d, "   matching ", round.(m; sigdigits = 2), "   lookup ", round.(l; sigdigits = 2))
 end
 ```
 
+(`p = 0.01, 0.03, 0.06, 0.1`.) Matching is not optimal: it treats a `Y`
+error as an unrelated `X` and `Z`, and correlated decoding does better.
+
 ## What is not here yet
 
-* Circuit-level noise and repeated syndrome rounds, which need a decoder that
-  reads syndromes through time.
-* A minimum-weight matching decoder for surface codes.
+* Circuit-level noise and repeated syndrome rounds, where the matching graph
+  gains a time direction.
 * Encoders for non-CSS codes as circuits (the tableau prepares them by
   measurement).
 * `T`-count optimisation as Reed–Muller decoding of phase polynomials.
