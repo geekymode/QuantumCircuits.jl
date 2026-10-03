@@ -46,6 +46,9 @@ export realify, hermitian_dilation, symmetric_embedding, embedding_circuit
 # quantum Fourier transform
 export qft, qft!, centered_dft!
 
+# T-count optimisation
+export t_count, z8_phase_polynomial, optimize_t_count
+
 # three-query synthesis
 export three_query, three_query_error, three_query_synthesis, centered_dft,
        qho_encoding, chirp_phases
@@ -123,6 +126,7 @@ include("classical_codes.jl")
 include("stabilizer.jl")
 include("qec_circuits.jl")
 include("tableau.jl")
+include("tcount.jl")
 include("qec_sim.jl")
 include("blossom.jl")
 include("matching.jl")

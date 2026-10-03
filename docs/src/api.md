@@ -192,6 +192,14 @@ qft!
 centered_dft!
 ```
 
+## T-count optimisation
+
+```@docs
+t_count
+z8_phase_polynomial
+optimize_t_count
+```
+
 ## Three-query synthesis
 
 ```@docs

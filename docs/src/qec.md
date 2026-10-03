@@ -159,6 +159,62 @@ So `T⊗15` is exactly a logical `T†` — the property that makes this code th
 workhorse of magic-state distillation. The Steane code, its `m = 3` sibling,
 has weights `{0, 4}` and `{3, 7}` and no such luck.
 
+## The same identity, used to remove T gates
+
+The weights behind transversal `T` have a second use. A circuit of CNOTs and
+`π/4` phase gates acts as
+
+```math
+|x\rangle \;\mapsto\; \omega^{f(x)}\, |A x\rangle,
+\qquad f(x) = \sum_{y \ne 0} \kappa_y \, (y \cdot x) \bmod 8,
+\qquad \omega = e^{i\pi/4},
+```
+
+where `(y·x)` is the parity of the input bits picked out by `y`
+([`z8_phase_polynomial`](@ref)). Every *odd* coefficient `κ_y` costs one `T`
+gate; even ones are `S` and `Z`, which are free in a fault-tolerant setting.
+Merging the gates by parity brings the T-count down to the number of odd
+coefficients — and Reed–Muller codes take it further. For any monomial `M`
+of degree at most `n - 4`, adding `1` to `κ_y` for every `y` containing `M`
+changes `f` by a multiple of 8: **the unitary is unchanged**, but the pattern
+of odd coefficients moves by a codeword of the punctured Reed–Muller code
+`RM(n-4, n)*`. The fewest T gates is the distance from the odd pattern to that
+code — a decoding problem, solved here exactly up to `n = 6` by walking all
+`2²²` codewords in Gray order (Amy and Mosca, 2019):
+
+```@example qec
+c = Circuit(4)                                   # T on every one of the 15 parities
+for y in 1:15
+    ws = [q for q in 1:4 if (y >> (4 - q)) & 1 == 1]
+    for q in ws[2:end]; push!(c, CNOT(), q, ws[1]); end
+    push!(c, T(), ws[1])
+    for q in reverse(ws[2:end]); push!(c, CNOT(), q, ws[1]); end
+end
+o = optimize_t_count(c)
+println(t_count(c), " T gates → ", t_count(o), ";  same unitary: ", matrix(o) ≈ matrix(c))
+```
+
+At `n = 4` the code is just the all-ones word, so this is the transversal-`T`
+identity again: `T` on all fifteen parities is the identity. On random
+`{CNOT, T, S}` circuits the gain from decoding grows with `n` — single
+circuits vary, so these are averages over twenty:
+
+```@example qec
+rng = Random.Xoshiro(3)
+for n in 4:6
+    counts = map(1:20) do _
+        local c = Circuit(n)
+        for _ in 1:60n
+            rand(rng) < 0.5 ? push!(c, CNOT(), randperm(rng, n)[1:2]...) :
+                              push!(c, rand(rng, [T(), Tdg(), S()]), rand(rng, 1:n))
+        end
+        (t_count(c), count(isodd, z8_phase_polynomial(c)[1]), t_count(optimize_t_count(c)))
+    end
+    avg(i) = round(sum(x[i] for x in counts) / 20; digits = 1)
+    println("n = ", n, ":  ", avg(1), " T  →  merged ", avg(2), "  →  decoded ", avg(3))
+end
+```
+
 ## Simulating at scale: the stabilizer tableau
 
 Every circuit on this page is Clifford, and Clifford circuits on stabilizer
