@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Error correction
+- GF(2) linear algebra: `gf2_rref`, `gf2_rank`, `gf2_nullspace`.
+- Classical codes: `LinearCode`, `hamming_code`, `reed_muller`, `encode`,
+  `syndrome`, `syndrome_decode`, `minimum_distance` (Gray-code walk over all
+  codewords), `dual`, `puncture`, and Reed's local decoder `rm_local_decode`.
+- Pauli operators (`PauliOp`) and stabilizer codes (`StabilizerCode`,
+  `css_code`), with logical operators computed when not given,
+  `code_distance` and `lookup_decoder`.
+- Catalogue: repetition, five-qubit, Shor, Steane, quantum Reed–Muller
+  `[[2ᵐ-1, 1, 3]]`, rotated surface codes.
+- Circuits: `encoding_circuit` (CSS, Hadamards and CNOTs) and
+  `syndrome_circuit` (one ancilla per stabilizer), checked exactly.
+- New docs page: *Error correction*, ending with transversal `T` on the
+  `[[15, 1, 3]]` code.
+
 ### Two-qubit KAK decomposition
 - `kak(U)` — `U = e^{iφ}(A₁⊗A₂)·exp(i(a XX + b YY + c ZZ))·(B₁⊗B₂)`, angles
   reduced to `(-π/4, π/4]`; `KAK` result type and `canonical_gate(a, b, c)`.

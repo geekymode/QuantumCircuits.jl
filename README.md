@@ -24,7 +24,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 3371 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 4611 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -258,6 +258,25 @@ dropping `Tr S = 0` makes the error stall at ~0.77. See the
 [Depth and width](https://geekymode.github.io/QuantumCircuits.jl/dev/parallel/)
 page.
 
+### Error correction
+
+Classical codes over GF(2) — Hamming, Reed–Muller, with syndrome and local
+decoding — and the stabilizer codes built on them, with encoding and syndrome
+circuits checked exactly against the statevector:
+
+```julia
+reed_muller(2, 6)                      # [64, 22, 16]; distance from a Gray-code walk of 2²² words
+code = quantum_reed_muller(4)          # [[15, 1, 3]]
+code_distance(rotated_surface_code(5)) # 5
+c, inputs = encoding_circuit(steane_code())   # H + CNOT, 11 CNOTs
+sc = syndrome_circuit(code)            # one ancilla per stabilizer
+lookup_decoder(code)                   # syndrome → lowest-weight correction
+```
+
+On the `[[15, 1, 3]]` code, `T` on every qubit is exactly a logical `T†`:
+`|0̄⟩` has codeword weights `≡ 0 (mod 8)` and `|1̄⟩` weights `≡ 7`. See the
+[Error correction](https://geekymode.github.io/QuantumCircuits.jl/dev/qec/) page.
+
 ### Illustrations
 
 Plotting is a package extension — it loads when a Makie backend is present and
@@ -318,6 +337,8 @@ true
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
 | Matrix decompositions | `zyz`, `decompose_1q`, `TwoLevel`, `two_level_decompose`, `two_level!`, `synthesize_unitary`, `demultiplex`, `multiplexed_1q` |
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
+| Classical codes | `gf2_rref`, `gf2_rank`, `gf2_nullspace`, `LinearCode`, `hamming_code`, `reed_muller`, `encode`, `syndrome`, `syndrome_decode`, `rm_local_decode`, `minimum_distance`, `dual`, `puncture` |
+| Stabilizer codes | `PauliOp`, `StabilizerCode`, `css_code`, `steane_code`, `shor_code`, `five_qubit_code`, `quantum_reed_muller`, `rotated_surface_code`, `code_distance`, `logical_operators`, `lookup_decoder`, `encoding_circuit`, `syndrome_circuit` |
 | Two-qubit (KAK) | `kak`, `KAK`, `canonical_gate`, `two_qubit`, `two_qubit!` |
 | Shannon decomposition | `qsd`, `cosine_sine`, `CSD`, `csd_angles`, `qsd_cnot_count`, `rand_unitary` |
 | Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
@@ -349,7 +370,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-3371 tests. Decompositions are checked against reference matrices built straight
+4611 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend, so they
 run in the docs environment (set up as above). `Pkg.test` would sandbox the

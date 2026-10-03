@@ -23,6 +23,7 @@ makedocs(
         "Applications"  => "applications.md",
         "Hardest case"  => "shannon.md",
         "Depth and width" => "parallel.md",
+        "Error correction" => "qec.md",
         "Illustrations" => "plots.md",
         "API reference" => "api.md",
     ],

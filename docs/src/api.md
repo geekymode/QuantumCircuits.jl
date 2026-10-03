@@ -103,6 +103,53 @@ two_qubit
 two_qubit!
 ```
 
+## GF(2) and classical codes
+
+```@docs
+gf2_rref
+gf2_rank
+gf2_nullspace
+LinearCode
+dimension
+generator_matrix
+parity_check_matrix
+encode
+syndrome
+iscodeword
+codewords
+minimum_distance
+dual
+puncture
+hamming_code
+reed_muller
+syndrome_decode
+rm_local_decode
+```
+
+## Pauli operators and stabilizer codes
+
+```@docs
+PauliOp
+weight
+commutes
+pauli!
+StabilizerCode
+stabilizers
+logical_operators
+is_css
+code_distance
+lookup_decoder
+css_code
+repetition_code
+five_qubit_code
+shor_code
+steane_code
+quantum_reed_muller
+rotated_surface_code
+encoding_circuit
+syndrome_circuit
+```
+
 ## Real symmetric embeddings
 
 ```@docs
