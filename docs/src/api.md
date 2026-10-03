@@ -59,6 +59,8 @@ PHASE
 CNOT
 CZ
 SWAP
+FANOUT
+PARITY
 ```
 
 ## Circuits
@@ -74,6 +76,57 @@ apply!
 draw
 count_gates
 count_cnots
+depth
+layers
+```
+
+## Ancillas
+
+```@docs
+add_ancillas!
+ancillas
+data_qubits
+isometry
+logical_matrix
+leakage
+is_clean
+implementation_error
+```
+
+## Real symmetric embeddings
+
+```@docs
+realify
+hermitian_dilation
+symmetric_embedding
+embedding_circuit
+```
+
+## Quantum Fourier transform
+
+```@docs
+qft
+qft!
+centered_dft!
+```
+
+## Three-query synthesis
+
+```@docs
+three_query
+three_query_error
+three_query_synthesis
+qho_encoding
+chirp_phases
+centered_dft
+```
+
+## Fan-out, parity and AND
+
+```@docs
+fanout!
+parity!
+and!
 ```
 
 ## Linear algebra

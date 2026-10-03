@@ -158,6 +158,61 @@ Exchange the states of two qubits.
 """
 SWAP() = Gate(:SWAP, ComplexF64[1 0 0 0; 0 0 1 0; 0 1 0 0; 0 0 0 1])
 
+# FANOUT and PARITY are stored densely like every other gate, so their matrix
+# grows as 4^(r+1): r = 10 is already 64 MB.  Past that, build the gate from
+# CNOTs (`fanout!` / `parity!` with `style=:ladder` or `:tree`) instead.
+const _MAX_DENSE_FANOUT = 10
+
+function _check_fanout_size(r::Integer, what::String)
+    r >= 1 || throw(ArgumentError("$what needs at least one wire besides the control/target"))
+    r <= _MAX_DENSE_FANOUT || throw(ArgumentError(
+        "a $what gate on $(r + 1) wires would need a dense $(1 << (r + 1))² matrix; " *
+        "the limit is $(_MAX_DENSE_FANOUT + 1) wires — use style=:tree to build it from CNOTs"))
+    nothing
+end
+
+"""
+    FANOUT(r)
+
+Quantum fan-out on `r + 1` wires: `|b, t₁ … t_r⟩ ↦ |b, t₁⊕b … t_r⊕b⟩`.  The
+first wire is the control.  Equal to `r` CNOTs sharing a control, but kept as
+one gate so that [`depth`](@ref) can count it as a single step — the
+unbounded fan-out model of constant-depth circuits.  See [`fanout!`](@ref).
+
+Stored as a dense matrix like every gate, so `r` is capped at 10 (an 11-wire
+gate, 64 MB).
+"""
+function FANOUT(r::Integer)
+    _check_fanout_size(r, "fan-out")
+    D = 1 << (r + 1)
+    flip = (1 << r) - 1
+    m = zeros(ComplexF64, D, D)
+    for i in 0:D-1
+        j = i >> r == 1 ? i ⊻ flip : i
+        m[j+1, i+1] = 1
+    end
+    Gate(:FANOUT, m)
+end
+
+"""
+    PARITY(r)
+
+Parity on `r + 1` wires: `|x₁ … x_r, t⟩ ↦ |x₁ … x_r, t ⊕ x₁ ⊕ … ⊕ x_r⟩`.  The
+last wire is the target.  It is [`FANOUT`](@ref) conjugated by Hadamards on
+every wire, with the control becoming the target.  See [`parity!`](@ref).
+Capped at `r = 10`, like [`FANOUT`](@ref).
+"""
+function PARITY(r::Integer)
+    _check_fanout_size(r, "parity")
+    D = 1 << (r + 1)
+    m = zeros(ComplexF64, D, D)
+    for i in 0:D-1
+        j = i ⊻ (count_ones(i >> 1) & 1)
+        m[j+1, i+1] = 1
+    end
+    Gate(:PARITY, m)
+end
+
 """
     controlled(g, n=1) -> Gate
 

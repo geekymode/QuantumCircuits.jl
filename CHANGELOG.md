@@ -1,0 +1,66 @@
+# Changelog
+
+## v0.2.0 — 2026-10-02
+
+Depth, ancillas and parallel synthesis. Everything before this release
+minimised CNOT *count* on exactly `n` wires; this release adds the other axis —
+circuit **depth**, and what extra wires buy — built around Nehoran and Yuen,
+[*All Unitaries Have Constant Depth Quantum Circuits*](https://arxiv.org/abs/2609.40351).
+New docs page: *Depth and width*.
+
+No breaking changes: existing circuits, defaults and printed output are
+unchanged.
+
+### Depth, fan-out and parity
+- `depth(c)`, `depth(c, name)` (e.g. CNOT depth) and `layers(c)` — ASAP
+  scheduling.
+- `FANOUT(r)` and `PARITY(r)` gates, one step each (the unbounded fan-out
+  model). Stored densely, so capped at 11 wires.
+- `fanout!` and `parity!` with `style = :ladder | :tree | :gate`. The tree is
+  exact on every input, not only on targets in `|0⟩`.
+- `phase_gadget!` and `pauli_rotation!` take `style`; `:tree` keeps
+  `2(k-1)` CNOTs at depth `2⌈log₂ k⌉ + 1` (8 qubits: depth 15 → 7).
+
+### Ancillas
+- `Circuit(n; ancillas)`, `add_ancillas!`, `ancillas`, `data_qubits`.
+- `isometry` and `logical_matrix` — the circuit seen from the data wires.
+- `leakage`, `is_clean`, `implementation_error` — `‖C(I⊗|0⟩) − U⊗|0⟩‖`.
+- `and!` — `CᵏX` as a Toffoli tree through `k - 2` clean ancillas, depth
+  `2⌈log₂ k⌉ - 1` (`k = 8`: depth 5, against 503 ancilla-free).
+- `statevector` accepts a data-only input state; drawings label ancilla
+  wires `a`.
+
+### Real symmetric embeddings
+- `realify`, `hermitian_dilation`, `symmetric_embedding` — any unitary as a
+  real, symmetric, traceless involution of four times the dimension.
+- `embedding_circuit` wraps any circuit for that involution into one that
+  implements the original unitary with clean ancillas.
+
+### Three-query synthesis
+- `three_query`, `three_query_error`, `three_query_synthesis` — a reference
+  implementation of the identity `S ≈ i Ê† Q̂ F̂ Q̂ F̂ Q̂ Ê`, with its components
+  `qho_encoding`, `chirp_phases`, `centered_dft`.
+- `threequeryfigure` — error against grid size (Makie extension).
+
+### Quantum Fourier transform
+- `qft!` and `qft`, with `inverse`, `swaps`, `cutoff` (approximate QFT) and
+  `lower` (CNOTs only).
+- `centered_dft!` — the three-query Fourier step as gates, exact.
+
+### Fixes
+- The README's plot-test command could not work (`Pkg.test` sandboxes the
+  Makie backend away); it now runs `test/runtests.jl` in the docs environment.
+
+## v0.1.0 — 2026-08-19
+
+First release: Gray-code circuit decompositions.
+
+- Gray code utilities; gates and a dense statevector simulator with exact
+  global phase.
+- Uniformly controlled rotations in `2ᵏ` CNOTs, diagonal unitaries in
+  `2ⁿ - 2`, state preparation in `2ⁿ⁺¹ - 4`.
+- Linear-algebra toolkit (Walsh–Hadamard and Pauli transforms), two-level and
+  ZYZ decompositions, phase polynomials and parity networks.
+- Fifteen worked applications of Gray coding.
+- Cosine–sine and quantum Shannon decomposition, `(3/4)·4ⁿ - (3/2)·2ⁿ` CNOTs.
+- Makie-based illustrations as a package extension.

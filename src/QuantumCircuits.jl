@@ -27,11 +27,28 @@ export gray, ungray, graycode, gray_flip_position, gray_flip_positions,
 
 # gates
 export Gate, Id, X, Y, Z, H, S, Sdg, T, Tdg, RX, RY, RZ, PHASE,
-       CNOT, CZ, SWAP, controlled, label
+       CNOT, CZ, SWAP, FANOUT, PARITY, controlled, label
 
 # circuits
 export Circuit, Instruction, nqubits, matrix, statevector, zero_state,
-       apply!, draw, count_gates, count_cnots
+       apply!, draw, count_gates, count_cnots, depth, layers
+
+# ancillas
+export add_ancillas!, ancillas, data_qubits, isometry, logical_matrix,
+       leakage, is_clean, implementation_error
+
+# embeddings in real symmetric involutions
+export realify, hermitian_dilation, symmetric_embedding, embedding_circuit
+
+# quantum Fourier transform
+export qft, qft!, centered_dft!
+
+# three-query synthesis
+export three_query, three_query_error, three_query_synthesis, centered_dft,
+       qho_encoding, chirp_phases
+
+# fan-out and parity
+export fanout!, parity!, and!
 
 # decompositions
 export multiplex_angles, multiplex_matrix, multiplexed_rotation!,
@@ -57,7 +74,7 @@ export matrix_root, multicontrolled, multicontrolled!, gray_encoder, gray_decode
 
 # plotting (implemented by the Makie extension)
 export circuitfigure, circuitplot!, matrixfigure, graycodefigure, costfigure,
-       csdfigure, qsdfigure
+       csdfigure, qsdfigure, threequeryfigure
 
 # phase polynomials
 export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
@@ -67,12 +84,16 @@ export phase_gadget, phase_gadget!, pauli_rotation!, trotter_step!,
 include("graycode.jl")
 include("gates.jl")
 include("circuit.jl")
+include("fanout.jl")
 include("decompose.jl")
 include("mathkit.jl")
 include("matrixdecomp.jl")
 include("phasepoly.jl")
 include("applications.jl")
 include("shannon.jl")
+include("embeddings.jl")
+include("qft.jl")
+include("threequery.jl")
 include("plots.jl")
 
 end # module

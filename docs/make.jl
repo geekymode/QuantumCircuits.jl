@@ -22,6 +22,7 @@ makedocs(
         "Linear algebra" => "math.md",
         "Applications"  => "applications.md",
         "Hardest case"  => "shannon.md",
+        "Depth and width" => "parallel.md",
         "Illustrations" => "plots.md",
         "API reference" => "api.md",
     ],
