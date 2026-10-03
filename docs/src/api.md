@@ -166,6 +166,11 @@ logical_error_rate
 MatchingDecoder
 matching_decoder
 decode
+min_weight_perfect_matching
+NoiseModel
+circuit_noise
+phenomenological_noise
+memory_experiment
 ```
 
 ## Real symmetric embeddings

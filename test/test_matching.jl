@@ -48,12 +48,22 @@
             defects = sort(randperm(rng, length(g.checks))[1:rand(rng, 1:7)])
             @test QuantumCircuits._min_matching(g, defects)[2] == brute(g, defects)
         end
-        # past maxdefects the greedy fallback still explains the syndrome
-        code = rotated_surface_code(7)
-        dec = matching_decoder(code; maxdefects=2)
-        E = PauliOp(rand(rng, 49) .< 0.3, falses(49))
-        s = syndrome(code, E)
-        @test syndrome(code, decode(dec, s)) == s
+        # the blossom path finds the same optimum as the subset DP
+        for _ in 1:200
+            defects = sort(randperm(rng, length(g.checks))[1:rand(rng, 1:10)])
+            pairs = QuantumCircuits._blossom_matching(g, defects)
+            B = size(g.dist, 1)
+            @test sum(g.dist[a, b] for (a, b) in pairs) == QuantumCircuits._min_matching(g, defects)[2]
+            @test sort(reduce(vcat, [b == B ? [a] : [a, b] for (a, b) in pairs])) == defects
+        end
+        # and decodes heavy errors: forced onto blossom, still explains the syndrome
+        code = rotated_surface_code(9)
+        dec = matching_decoder(code; maxdefects=0)
+        for _ in 1:20
+            E = PauliOp(rand(rng, 81) .< 0.2, rand(rng, 81) .< 0.2)
+            s = syndrome(code, E)
+            @test syndrome(code, decode(dec, s)) == s
+        end
     end
 
     @testset "other codes" begin
