@@ -27,6 +27,15 @@
   `logical_error_rate` (code-capacity Monte Carlo).
 - Stabilizer codes can record a known `distance`; the catalogue does.
 
+### T-count optimisation
+- `z8_phase_polynomial` — a `{CNOT, SWAP, π/4 phase}` circuit as
+  `ω^{f(x)}|Ax⟩`, `f` a parity expansion with coefficients mod 8.
+- `optimize_t_count` — merge by parity, then decode the odd pattern against
+  the punctured Reed–Muller code `RM(n-4, n)*` (Amy–Mosca): exact up to
+  `n = 6` by a Gray-code walk over all codewords, a one-/two-move local
+  search with restarts at `n = 7`. The unitary is unchanged, global phase
+  included. `t_count` counts T-type gates.
+
 ### Detector error models
 - `detector_error_model` / `DetectorErrorModel` — every single fault of the
   memory experiment traced by Pauli-frame propagation to its detectors and

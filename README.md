@@ -33,7 +33,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 14808 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 24773 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -292,6 +292,12 @@ logical_error_rate(code, 0.05; decoder = matching_decoder(code))  # minimum-weig
 memory_experiment(rotated_surface_code(5), circuit_noise(0.004))  # noisy rounds, decoded on the detector error model
 ```
 
+The same Reed–Muller weights remove T gates: `optimize_t_count(c)` merges a
+`{CNOT, T, S}` circuit by parity, then decodes its odd coefficients against
+`RM(n-4, n)*` — exact up to six qubits. The gain over merging alone grows with
+`n`: on random circuits it averages 15% at four qubits and about half at six,
+with the unitary unchanged.
+
 On the `[[15, 1, 3]]` code, `T` on every qubit is exactly a logical `T†`:
 `|0̄⟩` has codeword weights `≡ 0 (mod 8)` and `|1̄⟩` weights `≡ 7`. See the
 [Error correction](https://geekymode.github.io/QuantumCircuits.jl/dev/qec/) page.
@@ -351,6 +357,7 @@ true
 | Fan-out, parity, AND | `fanout!`, `parity!`, `and!` |
 | Real symmetric embeddings | `realify`, `hermitian_dilation`, `symmetric_embedding`, `embedding_circuit` |
 | Quantum Fourier transform | `qft`, `qft!`, `centered_dft!` |
+| T-count optimisation | `t_count`, `z8_phase_polynomial`, `optimize_t_count` |
 | Three-query synthesis | `three_query`, `three_query_error`, `three_query_synthesis`, `qho_encoding`, `chirp_phases`, `centered_dft` |
 | Gray-code synthesis | `multiplex_angles`, `multiplex_matrix`, `multiplexed_rotation!`, `multiplexed_ry`, `multiplexed_rz`, `diagonal`, `prepare_state` |
 | Linear algebra | `fwht`, `walsh_matrix`, `pauli`, `pauli_decompose`, `pauli_recompose`, `embed`, `kron_n`, `is_unitary`, `gate_fidelity`, `schmidt_values`, `entanglement_entropy` |
@@ -390,7 +397,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-14808 tests. Decompositions are checked against reference matrices built straight
+24773 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend, so they
 run in the docs environment (set up as above). `Pkg.test` would sandbox the
