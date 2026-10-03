@@ -272,23 +272,45 @@ Under *phenomenological* noise — data qubits depolarize and measurements
 flip, gates are perfect ([`phenomenological_noise`](@ref)) — bigger codes win
 up to about 3%, close to the known matching threshold (2.9% per error type;
 a `Z` memory only has to correct the `X` part, two thirds of depolarizing
-noise). Under full *circuit-level* noise ([`circuit_noise`](@ref)) the
-crossover measured here is about 0.3% — below the 0.5–1% that tuned
-decoders reach, for reasons this simple decoder makes visible:
+noise).
 
-* a two-qubit gate fault in the middle of a round fires detectors that no
-  single space or time edge explains — the graph lacks those *diagonal* edges;
-* every edge weighs the same, though data and measurement faults now have
-  different probabilities;
-* the checks are measured one after another, not in parallel, so faults pile up.
+Under full *circuit-level* noise ([`circuit_noise`](@ref)) the plain
+space-time graph is no longer the right one. A two-qubit gate fault in the
+middle of a round fires detectors that no single space or time edge
+explains, and data and measurement faults now have different probabilities.
+The fix is a **detector error model** ([`detector_error_model`](@ref)): list
+every possible single fault — each Pauli after each gate, each idle data
+fault, each flipped measurement — trace it through the rest of the circuit by
+*Pauli-frame propagation* to the detectors it fires and whether it flips
+`Z̄`, merge faults with the same effect, and weight each resulting edge by
+`log((1-p)/p)`. Effects are linear over GF(2), so only `X` and `Z` at each
+location need tracing.
 
-A **detector error model** — every single fault traced through the circuit to
-its detector signature and probability, then matched on that weighted graph —
-fixes the first two, and is the natural next step.
+```@example qec
+dem = detector_error_model(rotated_surface_code(3), circuit_noise(0.004); rounds = 3)
+```
+
+Decoding on that weighted graph — diagonal edges included — moves the
+circuit-level crossover from about 0.3% to about 0.7%, inside the 0.5–1% range
+tuned decoders report:
+
+```@example qec
+for d in (3, 5)
+    local code = rotated_surface_code(d)
+    u = memory_experiment(code, circuit_noise(0.004); shots = 4000, decoder = :uniform,
+                          rng = Random.Xoshiro(1))[1]
+    m = memory_experiment(code, circuit_noise(0.004); shots = 4000, decoder = :dem,
+                          rng = Random.Xoshiro(1))[1]
+    println("circuit noise p = 0.4%, d = ", d, ":  uniform graph ", u, "   detector error model ", m)
+end
+```
+
+The checks are still measured one after another rather than in parallel,
+which lets faults pile up within a round; a parallel schedule would raise the
+crossover further.
 
 ## What is not here yet
 
-* A detector error model, and decoding on it.
 * Parallel scheduling of the syndrome circuit.
 * Encoders for non-CSS codes as circuits (the tableau prepares them by
   measurement).

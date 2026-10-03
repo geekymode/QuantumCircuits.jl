@@ -83,7 +83,7 @@ export PauliOp, weight, commutes, pauli!, StabilizerCode, stabilizers, logical_o
 export Tableau, measure!, expectation, prepare_logical_zero, sample_syndrome,
        logical_error_rate, MatchingDecoder, matching_decoder, decode,
        min_weight_perfect_matching, NoiseModel, circuit_noise, phenomenological_noise,
-       memory_experiment
+       memory_experiment, DetectorErrorModel, detector_error_model
 
 # two-qubit (KAK) decomposition
 export KAK, kak, canonical_gate, two_qubit, two_qubit!
@@ -127,6 +127,7 @@ include("qec_sim.jl")
 include("blossom.jl")
 include("matching.jl")
 include("memory.jl")
+include("dem.jl")
 include("threequery.jl")
 include("plots.jl")
 

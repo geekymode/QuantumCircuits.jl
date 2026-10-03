@@ -33,7 +33,7 @@ git clone https://github.com/geekymode/QuantumCircuits.jl.git
 cd QuantumCircuits.jl
 julia --project=. -e 'using Pkg; Pkg.instantiate()'   # resolves Manifest.toml
 julia --project=. examples/demo.jl                    # guided tour
-julia --project=. -e 'using Pkg; Pkg.test()'          # 13836 tests
+julia --project=. -e 'using Pkg; Pkg.test()'          # 14808 tests
 ```
 
 Interactive REPL, with the project environment active:
@@ -289,7 +289,7 @@ distance-7 surface code with its ancillas, or a 1000-qubit GHZ state:
 t = prepare_logical_zero(five_qubit_code())   # by measuring stabilizers
 sample_syndrome(rotated_surface_code(7), E)   # runs the real circuit, measures ancillas
 logical_error_rate(code, 0.05; decoder = matching_decoder(code))  # minimum-weight matching
-memory_experiment(rotated_surface_code(5), circuit_noise(0.002))  # noisy rounds, space-time matching
+memory_experiment(rotated_surface_code(5), circuit_noise(0.004))  # noisy rounds, decoded on the detector error model
 ```
 
 On the `[[15, 1, 3]]` code, `T` on every qubit is exactly a logical `T†`:
@@ -358,7 +358,7 @@ true
 | Phase polynomials | `PhasePolynomial`, `phase_polynomial`, `phases`, `support`, `synthesize`, `phase_gadget!`, `pauli_rotation!`, `trotter_step!`, `cancel_adjacent_cnots!` |
 | Classical codes | `gf2_rref`, `gf2_rank`, `gf2_nullspace`, `LinearCode`, `hamming_code`, `reed_muller`, `encode`, `syndrome`, `syndrome_decode`, `rm_local_decode`, `minimum_distance`, `dual`, `puncture` |
 | Stabilizer codes | `PauliOp`, `StabilizerCode`, `css_code`, `steane_code`, `shor_code`, `five_qubit_code`, `quantum_reed_muller`, `rotated_surface_code`, `code_distance`, `logical_operators`, `lookup_decoder`, `encoding_circuit`, `syndrome_circuit` |
-| Stabilizer simulation | `Tableau`, `apply!`, `measure!`, `expectation`, `prepare_logical_zero`, `sample_syndrome`, `logical_error_rate`, `matching_decoder`, `decode`, `min_weight_perfect_matching`, `NoiseModel`, `circuit_noise`, `phenomenological_noise`, `memory_experiment` |
+| Stabilizer simulation | `Tableau`, `apply!`, `measure!`, `expectation`, `prepare_logical_zero`, `sample_syndrome`, `logical_error_rate`, `matching_decoder`, `decode`, `min_weight_perfect_matching`, `NoiseModel`, `circuit_noise`, `phenomenological_noise`, `memory_experiment`, `detector_error_model` |
 | Two-qubit (KAK) | `kak`, `KAK`, `canonical_gate`, `two_qubit`, `two_qubit!` |
 | Shannon decomposition | `qsd`, `cosine_sine`, `CSD`, `csd_angles`, `qsd_cnot_count`, `rand_unitary` |
 | Applications | `multicontrolled`, `matrix_root`, `gray_encoder`, `gray_decoder`, `increment`, `gray_increment`, `select`, `support_mask`, `gray_order`, `truncate_terms` |
@@ -390,7 +390,7 @@ julia --project=docs -e 'using LiveServer; servedocs()'
 julia --project=. -e 'using Pkg; Pkg.test()'
 ```
 
-13836 tests. Decompositions are checked against reference matrices built straight
+14808 tests. Decompositions are checked against reference matrices built straight
 from the definitions (no Gray code in the reference path), including exact
 global phase and exact CNOT counts. Plot tests need a Makie backend, so they
 run in the docs environment (set up as above). `Pkg.test` would sandbox the
