@@ -76,6 +76,10 @@ export PauliOp, weight, commutes, pauli!, StabilizerCode, stabilizers, logical_o
        shor_code, steane_code, quantum_reed_muller, rotated_surface_code,
        encoding_circuit, syndrome_circuit
 
+# stabilizer simulation
+export Tableau, measure!, expectation, prepare_logical_zero, sample_syndrome,
+       logical_error_rate
+
 # two-qubit (KAK) decomposition
 export KAK, kak, canonical_gate, two_qubit, two_qubit!
 
@@ -113,6 +117,8 @@ include("gf2.jl")
 include("classical_codes.jl")
 include("stabilizer.jl")
 include("qec_circuits.jl")
+include("tableau.jl")
+include("qec_sim.jl")
 include("threequery.jl")
 include("plots.jl")
 
