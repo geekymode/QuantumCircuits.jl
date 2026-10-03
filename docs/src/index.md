@@ -1,13 +1,27 @@
 # QuantumCircuits.jl
 
-A small, dependency-free Julia package for building quantum circuits and
-decomposing structured unitaries into elementary gates.
+A dependency-free Julia package for building quantum circuits, compiling
+unitaries into elementary gates, and protecting them with error-correcting
+codes — every result checked exactly against a simulator.
 
-The theme of this first release is **Gray coding**: order the computational
-basis so consecutive states differ in exactly one bit, and the CNOT ladders in
-a decomposition collapse to a single CNOT per step. The
-[Gray coding](@ref "Gray coding and efficient quantum circuit decomposition")
-page has the derivation and the reason it matters.
+It started from one idea, **Gray coding**: order the computational basis so
+consecutive states differ in exactly one bit, and the CNOT ladders in a
+decomposition collapse to a single CNOT per step. That idea keeps returning —
+in multiplexors, in the Shannon decomposition, in parity networks, and in
+walking the codewords of a Reed–Muller code.
+
+## What is inside
+
+| Page | What it covers |
+|---|---|
+| [Gray coding](@ref "Gray coding and efficient quantum circuit decomposition") | the derivation; multiplexed rotations, diagonal unitaries, state preparation |
+| [Linear algebra](@ref "Linear algebra and decompositions") | Walsh and Pauli transforms, ZYZ and two-level decompositions, phase polynomials |
+| [Applications](@ref "Applications of Gray coding") | fifteen worked applications of Gray coding, measured |
+| [Hardest case](@ref "The hardest case: an arbitrary unitary") | arbitrary unitaries: cosine–sine and quantum Shannon decomposition down to two-qubit KAK blocks, `(9/16)·4ⁿ` CNOTs |
+| [Depth and width](@ref "Trading depth for width") | circuit depth, fan-out, ancillas, the QFT, and Nehoran–Yuen's constant-depth synthesis of every unitary |
+| [Error correction](@ref) | GF(2) and Reed–Muller codes, stabilizer codes and their circuits, transversal `T`, a Clifford-tableau simulator, matching decoders and logical error rates |
+| [Illustrations](@ref) | publication-quality figures through a Makie extension |
+| [API reference](@ref) | every exported function |
 
 ## Installation
 
@@ -32,13 +46,14 @@ statevector(c)        # (|00⟩ + |11⟩)/√2
 matrix(c)             # the 4×4 unitary
 ```
 
-## What it buys you
+## What Gray coding buys
 
-| Task | naive | Gray-code (this package) |
+| Task | naive | this package |
 |---|---|---|
 | Uniformly controlled rotation, `k` controls | ``O(k 2^k)`` CNOTs | ``2^k`` |
 | Diagonal unitary on `n` qubits | ``O(n 2^n)`` | ``2^n - 2`` |
 | Arbitrary state preparation | ``O(n 2^n)`` | ``2^{n+1} - 4`` |
+| Arbitrary unitary on `n` qubits | ``O(n 4^n)`` (two-level) | ``\tfrac{9}{16} 4^n - \tfrac{3}{2} 2^n`` |
 
 ### Uniformly controlled (multiplexed) rotations
 

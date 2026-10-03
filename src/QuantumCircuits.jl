@@ -1,13 +1,16 @@
 """
     QuantumCircuits
 
-A small, dependency-free Julia package for building quantum circuits and
-decomposing structured unitaries into elementary gates.
+A dependency-free Julia package for building quantum circuits, compiling
+unitaries into elementary gates, and protecting them with error-correcting
+codes.
 
-The organising idea of the first release is **Gray coding**: ordering the
-computational basis so that consecutive states differ in exactly one bit turns
-the CNOT ladders in a decomposition into a single CNOT per step.  See
-`docs/graycode.md`.
+It grew from **Gray coding**: ordering the computational basis so that
+consecutive states differ in exactly one bit turns the CNOT ladders in a
+decomposition into a single CNOT per step.  Around that: arbitrary-unitary
+synthesis (Shannon + KAK), depth and ancilla-aware circuits, the QFT,
+Nehoran–Yuen three-query synthesis, classical and stabilizer codes with
+their circuits, and a Clifford-tableau simulator with matching decoders.
 
 Conventions
 -----------
@@ -78,7 +81,7 @@ export PauliOp, weight, commutes, pauli!, StabilizerCode, stabilizers, logical_o
 
 # stabilizer simulation
 export Tableau, measure!, expectation, prepare_logical_zero, sample_syndrome,
-       logical_error_rate
+       logical_error_rate, MatchingDecoder, matching_decoder, decode
 
 # two-qubit (KAK) decomposition
 export KAK, kak, canonical_gate, two_qubit, two_qubit!
@@ -119,6 +122,7 @@ include("stabilizer.jl")
 include("qec_circuits.jl")
 include("tableau.jl")
 include("qec_sim.jl")
+include("matching.jl")
 include("threequery.jl")
 include("plots.jl")
 

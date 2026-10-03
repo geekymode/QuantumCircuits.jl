@@ -27,6 +27,13 @@
   `logical_error_rate` (code-capacity Monte Carlo).
 - Stabilizer codes can record a known `distance`; the catalogue does.
 
+### Matching decoder
+- `matching_decoder` / `decode` — minimum-weight matching for surface-code-like
+  CSS codes, exact by dynamic programming over defect subsets (greedy past
+  `maxdefects`). The correction always explains the syndrome; every error of
+  weight `≤ ⌊(d-1)/2⌋` is corrected. Code-capacity crossover near 15%, against
+  below 1% for the lookup table. `logical_error_rate` accepts either decoder.
+
 ### Two-qubit KAK decomposition
 - `kak(U)` — `U = e^{iφ}(A₁⊗A₂)·exp(i(a XX + b YY + c ZZ))·(B₁⊗B₂)`, angles
   reduced to `(-π/4, π/4]`; `KAK` result type and `canonical_gate(a, b, c)`.
